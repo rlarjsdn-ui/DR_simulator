@@ -3423,7 +3423,71 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
 .billing-lower-grid{align-items:stretch !important;}
 .billing-point-card{min-height:250px !important;}
 
-</style>
+/* ── 데스크탑/모바일 전환 ── */
+.desktop-only{ display:block; }
+.mobile-only{ display:none; }
+
+@media(max-width:768px){
+    .desktop-only{ display:none !important; }
+    .mobile-only{ display:block !important; }
+
+    .mobile-home-wrap{
+        display:flex !important;
+        flex-direction:column;
+        gap:10px;
+        padding:12px;
+        padding-top:0;
+    }
+    .mobile-card{
+        background:rgba(245,240,232,0.92);
+        backdrop-filter:blur(16px);
+        -webkit-backdrop-filter:blur(16px);
+        border-radius:20px;
+        padding:16px;
+        box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .mobile-main-title{ font-size:20px; font-weight:700; color:#1a1a1a; line-height:1.3; }
+    .mobile-date{ font-size:12px; color:#888; margin-top:4px; }
+    .mobile-chip{ display:inline-block; background:#ffe476; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; margin:10px 0 4px; }
+    .mobile-status-text{ font-size:13px; color:#555; margin-bottom:4px; }
+    .mobile-price{ font-size:32px; font-weight:800; color:#1a1a1a; }
+    .mobile-price span{ font-size:14px; font-weight:500; color:#888; margin-left:2px; }
+    .mobile-peak-chip{ display:inline-block; background:rgba(0,0,0,0.06); border-radius:20px; padding:4px 12px; font-size:12px; color:#555; margin:8px 0 12px; }
+    .mobile-summary-row{ display:flex; gap:0; border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; }
+    .mobile-summary-item{ flex:1; }
+    .mobile-summary-divider{ width:1px; background:rgba(0,0,0,0.08); margin:0 12px; }
+    .mobile-summary-label{ font-size:11px; color:#888; margin-bottom:4px; }
+    .mobile-summary-value{ font-size:18px; font-weight:700; color:#1a1a1a; }
+    .mobile-summary-value span{ font-size:11px; font-weight:400; color:#888; }
+    .mobile-summary-hint{ font-size:11px; color:#aaa; margin-top:2px; }
+    .mobile-card-head{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#888; margin-bottom:8px; }
+    .mobile-region-pill{ display:inline-block; background:rgba(0,0,0,0.06); border-radius:20px; padding:3px 10px; font-size:11px; color:#555; margin-bottom:8px; }
+    .mobile-weather-body{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+    .mobile-temp{ font-size:36px; font-weight:700; color:#1a1a1a; }
+    .mobile-weather-desc{ font-size:13px; color:#666; }
+    .mobile-weather-detail{ display:flex; gap:12px; font-size:12px; color:#888; flex-wrap:wrap; }
+    .ai-badge-sm{ background:#ffe476; border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; }
+    .mobile-ai-body{ display:flex; justify-content:space-between; align-items:flex-start; margin:8px 0; }
+    .mobile-ai-status{ font-size:28px; font-weight:800; color:#1a1a1a; }
+    .mobile-ai-desc{ font-size:12px; color:#888; margin-top:2px; }
+    .mobile-ai-load{ background:rgba(255,255,255,0.7); border-radius:12px; padding:8px 14px; text-align:center; }
+    .mobile-ai-load-label{ font-size:11px; color:#888; }
+    .mobile-ai-load-value{ font-size:16px; font-weight:700; color:#1a1a1a; }
+    .mobile-risk-bar-wrap{ margin:8px 0; }
+    .mobile-risk-label{ display:flex; justify-content:space-between; font-size:12px; color:#888; margin-bottom:4px; }
+    .mobile-ai-action{ font-size:12px; color:#555; margin-top:6px; line-height:1.5; }
+    .mobile-dr-card{ display:flex !important; justify-content:space-between; align-items:center; text-decoration:none; color:inherit; }
+    .mobile-dr-left{ display:flex; align-items:center; gap:12px; }
+    .mobile-dr-icon{ font-size:24px; background:#ffe476; border-radius:14px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+    .mobile-dr-title{ font-size:15px; font-weight:700; color:#1a1a1a; }
+    .mobile-dr-sub{ font-size:12px; color:#555; margin-top:2px; }
+    .mobile-dr-meta{ font-size:11px; color:#888; margin-top:2px; }
+    .mobile-schedule-head{ font-size:15px; font-weight:700; color:#1a1a1a; margin-bottom:6px; }
+    .mobile-schedule-desc{ font-size:12px; color:#888; margin-bottom:10px; }
+    .mobile-schedule-btn{ display:block; text-align:center; background:rgba(255,255,255,0.8); border-radius:14px; padding:10px; font-size:14px; font-weight:600; color:#1a1a1a; text-decoration:none; margin-top:10px; }
+    .dock-timeline{ overflow-x:auto !important; }
+    .smart-schedule-board{ overflow-x:auto !important; }
+}
 
 """, unsafe_allow_html=True)
 # ─── 탭 버튼 글씨 색상 최종 고정 ───
@@ -4194,7 +4258,9 @@ else:
 
 st.markdown(f"""
 <div class="home-bg-shell">
-<div class="home-dashboard-grid">
+
+<!-- 데스크탑 레이아웃 -->
+<div class="home-dashboard-grid desktop-only">
 
 <div class="glass-panel left-ref-panel">
 <div class="left-ref-title">오늘의 전기 사용,<br>가장 좋은 시간은?</div>
@@ -4204,7 +4270,6 @@ st.markdown(f"""
 <div class="left-main-price">{current_price}<span>원/kWh</span></div>
 <div class="left-peak-chip">최대부하 대비 {saving_pct}% 낮음 ↓</div>
 <div class="left-ref-divider"></div>
-
 <div class="left-summary-grid">
 <div class="summary-tile min-wide">
 <div class="summary-label">오늘 최저 요금</div>
@@ -4295,7 +4360,97 @@ st.markdown(f"""
 
 </div>
 
-<div class="bottom-dashboard-row">
+<!-- 모바일 레이아웃 -->
+<div class="mobile-only mobile-home-wrap">
+
+<div class="mobile-card">
+<div class="mobile-title-row">
+<div>
+<div class="mobile-main-title">오늘의 전기 사용,<br>가장 좋은 시간은?</div>
+<div class="mobile-date">{now.strftime("%Y년 %m월 %d일 %H:%M")}</div>
+</div>
+</div>
+<div class="mobile-chip">{s_tag.replace("지금 · ", "")}</div>
+<div class="mobile-status-text">{s_main}</div>
+<div class="mobile-price">{current_price}<span>원/kWh</span></div>
+<div class="mobile-peak-chip">최대부하 대비 {saving_pct}% 낮음 ↓</div>
+<div class="mobile-summary-row">
+<div class="mobile-summary-item">
+<div class="mobile-summary-label">오늘 최저 요금</div>
+<div class="mobile-summary-value">{min_price}<span>원/kWh</span></div>
+<div class="mobile-summary-hint">{min_hour:02d}:00 이후</div>
+</div>
+<div class="mobile-summary-divider"></div>
+<div class="mobile-summary-item">
+<div class="mobile-summary-label">월 예상 요금</div>
+<div class="mobile-summary-value">{monthly_fee_est:,}<span>원</span></div>
+<div class="mobile-summary-hint">절감 {monthly_saving_est:,}원 가능</div>
+</div>
+</div>
+</div>
+
+<div class="mobile-card mobile-weather-card">
+<div class="mobile-card-head"><span>실시간 날씨</span><span>🌤️</span></div>
+<div class="mobile-region-pill">현재 지역 · {selected_city}</div>
+<div class="mobile-weather-body">
+<div class="mobile-temp">{weather['temp']}°C</div>
+<div class="mobile-weather-desc">{weather['desc']}</div>
+<div class="mobile-weather-detail">
+<span>습도 {weather['humidity']}%</span>
+<span>바람 {weather['wind']}m/s</span>
+<span>강수량 {weather['precip']}mm</span>
+</div>
+</div>
+</div>
+
+<div class="mobile-card mobile-ai-card">
+<div class="mobile-card-head"><span>AI 피크 예측</span><span class="ai-badge-sm">AI</span></div>
+<div class="mobile-ai-body">
+<div>
+<div class="mobile-ai-status">{ai_status_text}</div>
+<div class="mobile-ai-desc">{ai_status_desc}</div>
+</div>
+<div class="mobile-ai-load">
+<div class="mobile-ai-load-label">예상 부하</div>
+<div class="mobile-ai-load-value">{ai_txt}</div>
+</div>
+</div>
+<div class="mobile-risk-bar-wrap">
+<div class="mobile-risk-label"><span>피크 위험도</span><strong>{ai_risk_pct}%</strong></div>
+<div class="ai-risk-bar"><div class="ai-risk-fill" style="width:{ai_risk_pct}%;"></div></div>
+</div>
+<div class="mobile-ai-action">{ai_action_text}</div>
+</div>
+
+<a class="mobile-card mobile-dr-card" href="#dr-event-section">
+<div class="mobile-dr-left">
+<span class="mobile-dr-icon">🔔</span>
+<div>
+<div class="mobile-dr-title">전력회사 DR 알림</div>
+<div class="mobile-dr-sub">{dr_time_home} 감축 요청 확인하기</div>
+<div class="mobile-dr-meta">DR 이벤트 시간대 · {dr_reward_home}원/kWh 인센티브</div>
+</div>
+</div>
+<span>→</span>
+</a>
+
+<div class="mobile-card mobile-schedule-card">
+<div class="mobile-schedule-head">
+<span>📅 추천 사용 스케줄</span>
+</div>
+<div class="mobile-schedule-desc">{schedule_desc}</div>
+<div class="dock-timeline" style="overflow-x:auto;">
+<div class="best-time-chip">{min_hour:02d}:00 가장 저렴해요</div>
+<div class="dock-hours"><span>00:00</span><span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>24:00</span></div>
+<div class="dock-line"></div>
+<div class="appliance-row">{home_app_html}</div>
+</div>
+<a class="mobile-schedule-btn" href="#schedule-section">스케줄 보기 →</a>
+</div>
+
+</div>
+
+<div class="bottom-dashboard-row desktop-only">
 <div class="schedule-dock">
 <div>
 <div class="schedule-dock-title"><span class="schedule-calendar-icon">📅</span>추천 사용 스케줄</div>
