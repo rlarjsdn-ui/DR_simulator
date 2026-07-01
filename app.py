@@ -917,6 +917,89 @@ div[data-testid="stTabs"] [data-baseweb="tab-highlight"]{
     .schedule-dock{grid-template-columns:1fr;}
 }
 
+@media(max-width:480px){
+    /* 메인화면 전체 레이아웃 */
+    .home-dashboard-grid{
+        display:flex !important;
+        flex-direction:column !important;
+        gap:12px !important;
+        padding:12px !important;
+        min-height:unset !important;
+    }
+    .bottom-dashboard-row{
+        display:flex !important;
+        flex-direction:column !important;
+        gap:12px !important;
+        padding:0 12px 12px !important;
+    }
+
+    /* 중앙 타이틀 */
+    .center-copy{
+        position:relative !important;
+        left:unset !important;
+        top:unset !important;
+        transform:none !important;
+        text-align:left !important;
+        padding:12px !important;
+    }
+    .center-copy h1{font-size:22px !important; line-height:1.3 !important;}
+    .center-copy p{font-size:13px !important;}
+
+    /* 날씨/AI 카드 */
+    .top-weather-card, .right-ai-panel{
+        position:relative !important;
+        left:unset !important;
+        top:unset !important;
+        right:unset !important;
+        width:100% !important;
+        min-width:unset !important;
+        max-width:100% !important;
+    }
+
+    /* AI 피크 카드 글씨 */
+    .ai-peak-label{font-size:28px !important;}
+    .ai-peak-sub{font-size:12px !important;}
+
+    /* 스케줄 도크 */
+    .schedule-dock{
+        flex-direction:column !important;
+        padding:14px !important;
+    }
+    .dock-timeline{overflow-x:auto !important;}
+
+    /* 왼쪽 패널 */
+    .left-ref-panel{
+        position:relative !important;
+        left:unset !important;
+        width:100% !important;
+    }
+
+    /* 스케줄 타임라인 */
+    .smart-schedule-board{overflow-x:auto !important;}
+    .smart-schedule-hours{
+        grid-template-columns:80px repeat(24, minmax(28px,1fr)) !important;
+        min-width:700px !important;
+    }
+    .smart-schedule-row{
+        grid-template-columns:80px 1fr !important;
+        min-width:700px !important;
+    }
+
+    /* 절감 요약 카드 */
+    .saving-summary-card{
+        flex-direction:column !important;
+        gap:10px !important;
+    }
+    .saving-summary-right{
+        align-self:flex-start !important;
+    }
+
+    /* 배경이미지 */
+    .home-bg-overlay{
+        background-attachment:scroll !important;
+    }
+}
+
 /* 지역 선택 박스 위치 보정 */
 div[data-testid="stSelectbox"]{position:relative; z-index:60;}
 .floating-city-label{position:relative; z-index:60;}
@@ -5132,4 +5215,3 @@ if False:
     sc2.metric("중간부하", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='normal')}시간", "153.0원")
     sc3.metric("최대부하", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='expensive')}시간","188.8원")
     sc4.metric("DR/예외", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='peak')}시간",   "별도")
-
