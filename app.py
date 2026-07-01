@@ -2665,6 +2665,44 @@ div[data-testid="stTabs"] div[role="tabpanel"] .stButton > button{
     font-weight:850 !important;
     color:#4d5661 !important;
 }
+
+/* 모바일: 절감 요약 카드가 750px 강제폭 때문에 잘리는 문제 수정 */
+@media(max-width:900px){
+    .saving-summary-card{
+        display:block !important;
+        grid-template-columns:1fr !important;
+        padding:18px 20px !important;
+        gap:0 !important;
+        width:100% !important;
+        max-width:100% !important;
+        box-sizing:border-box !important;
+    }
+    .saving-summary-main{
+        font-size:17px !important;
+        letter-spacing:-.03em !important;
+        word-break:keep-all !important;
+    }
+    .saving-summary-main strong{
+        font-size:20px !important;
+    }
+    .saving-arrow{
+        font-size:16px !important;
+        margin:0 6px !important;
+    }
+    .saving-summary-sub{
+        font-size:12px !important;
+    }
+    .saving-summary-right{
+        margin-top:16px !important;
+        text-align:left !important;
+        width:100% !important;
+        box-sizing:border-box !important;
+    }
+    .saving-summary-save{
+        font-size:26px !important;
+    }
+}
+
 /* DR 이벤트 토글 ON 색상 강제 변경 */
 div[data-testid="stToggle"] div[role="switch"][aria-checked="true"]{
     background-color:rgba(255,228,118,.90) !important;
