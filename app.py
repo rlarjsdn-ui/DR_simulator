@@ -1110,6 +1110,19 @@ div[data-testid="stTabs"] [data-baseweb="tab-highlight"]{
     .home-bg-overlay{
         background-attachment:scroll !important;
     }
+
+    /* 지역 선택 박스 위치/폭 보정 (겹침 방지) */
+    div[data-testid="stSelectbox"]{
+        width:100% !important;
+        max-width:390px !important;
+        transform:none !important;
+        margin:0 auto 12px auto !important;
+    }
+
+    /* HOME 전체 음수 margin 완화 (지역 선택 박스가 아래 카드 덮는 것 방지) */
+    .home-bg-shell{
+        margin:8px auto 1.2rem auto !important;
+    }
 }
 
 /* 지역 선택 박스 위치 보정 */
