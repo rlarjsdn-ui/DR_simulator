@@ -3270,6 +3270,7 @@ from io import BytesIO
 
 def _make_bg_data_uri():
     candidates = [
+		Path("home_bg_web.png"),
         Path("assets/home_bg_web.png"),
         Path("assets/home_bg_web.jpg"),
         Path("assets/home_bg_web.jpeg"),
