@@ -170,6 +170,118 @@ div[data-testid="stSelectbox"] svg{
     color:#202124 !important;
 }
 
+/* ── number_input 밝은 배경 (폰에서 검은색으로 보이는 문제 해결) ── */
+div[data-testid="stNumberInput"] input{
+    background:#f5f0e8 !important;
+    color:#202124 !important;
+    border-radius:10px !important;
+    border:1px solid rgba(0,0,0,0.1) !important;
+}
+div[data-testid="stNumberInput"] > div{
+    background:#f5f0e8 !important;
+    border-radius:12px !important;
+    border:1px solid rgba(0,0,0,0.1) !important;
+}
+div[data-testid="stNumberInput"] button{
+    background:#f5f0e8 !important;
+    color:#202124 !important;
+    border:none !important;
+}
+
+/* ── 모바일 간격 최적화 (토스 스타일) ── */
+@media(max-width:480px){
+    /* 전체 여백 줄이기 */
+    .main .block-container{
+        padding:0.5rem 0.8rem !important;
+        max-width:100% !important;
+    }
+
+    /* 위젯 간격 줄이기 */
+    div[data-testid="stVerticalBlock"] > div{
+        gap:0.3rem !important;
+    }
+
+    /* 섹션 간격 */
+    div[data-testid="stVerticalBlock"]{
+        gap:0.4rem !important;
+    }
+
+    /* number_input 높이 줄이기 */
+    div[data-testid="stNumberInput"] input{
+        padding:6px 10px !important;
+        font-size:15px !important;
+        height:38px !important;
+    }
+
+    /* selectbox 높이 줄이기 */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div{
+        min-height:38px !important;
+        padding:4px 10px !important;
+    }
+
+    /* 버튼 높이 줄이기 */
+    div[data-testid="stButton"] button{
+        padding:6px 12px !important;
+        font-size:14px !important;
+    }
+
+    /* 탭 글씨 */
+    div[data-testid="stTabs"] button{
+        font-size:13px !important;
+        padding:6px 10px !important;
+    }
+
+    /* 카드 패딩 줄이기 */
+    .section-card, .savings-card, .dr-event-card{
+        padding:12px !important;
+        margin-bottom:8px !important;
+    }
+
+    /* expander 패딩 */
+    div[data-testid="stExpander"]{
+        margin-bottom:6px !important;
+    }
+
+    /* 체크박스 간격 */
+    div[data-testid="stCheckbox"]{
+        margin-bottom:2px !important;
+    }
+
+    /* 메인화면 카드들 세로 배치 */
+    .home-dashboard-grid{
+        display:flex !important;
+        flex-direction:column !important;
+        gap:10px !important;
+        padding:10px !important;
+        min-height:unset !important;
+    }
+    .bottom-dashboard-row{
+        display:flex !important;
+        flex-direction:column !important;
+        gap:10px !important;
+        padding:0 10px 10px !important;
+    }
+    .left-ref-panel, .center-copy, .top-weather-card, .right-ai-panel{
+        position:relative !important;
+        left:unset !important; top:unset !important; right:unset !important;
+        width:100% !important;
+        min-width:unset !important;
+        max-width:100% !important;
+    }
+    .center-copy h1{font-size:20px !important; line-height:1.3 !important;}
+    .schedule-dock{flex-direction:column !important;}
+    .dock-timeline{overflow-x:auto !important;}
+    .smart-schedule-board{overflow-x:auto !important;}
+    .smart-schedule-hours{
+        grid-template-columns:72px repeat(24, minmax(26px,1fr)) !important;
+        min-width:650px !important;
+    }
+    .smart-schedule-row{
+        grid-template-columns:72px 1fr !important;
+        min-width:650px !important;
+    }
+}
+
 /* Schedule/Billing/Forecast 탭 안 selectbox는 HOME 위치/폭 이동 적용하지 않기 */
 div[data-testid="stTabs"] div[data-testid="stSelectbox"]{
     width:auto !important;
