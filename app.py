@@ -2,6 +2,7 @@
 DR 전력 어드바이저 v4 — Premium Dashboard UI
 """
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import pickle
@@ -95,11 +96,11 @@ st.set_page_config(
 )
 
 # ─── PWA(홈 화면 앱) 설정: 아이콘 + 주소창 숨김 ───
-# static/dr_icon.png 실제 파일 URL 사용 (data URI는 iOS에서 홈 화면 아이콘으로 잘 안 잡힘)
+# st.markdown의 <script>는 브라우저에서 실행되지 않으므로 components.html + window.parent.document 사용
 _PWA_JS = """
 <script>
 (function() {
-    var head = document.head;
+    var head = window.parent.document.head;
     var iconUrlRoot = "https://raw.githubusercontent.com/rlarjsdn-ui/DR_simulator/main/static/dr_icon.png";
 
     function addTag(tagName, attrs) {
@@ -108,7 +109,7 @@ _PWA_JS = """
             var existing = head.querySelectorAll(tagName + '[' + checkAttr + '="' + attrs[checkAttr] + '"]');
             existing.forEach(function(el) { el.remove(); });
         }
-        var el = document.createElement(tagName);
+        var el = window.parent.document.createElement(tagName);
         for (var key in attrs) { el.setAttribute(key, attrs[key]); }
         head.appendChild(el);
     }
@@ -124,7 +125,7 @@ _PWA_JS = """
 </script>
 """
 
-st.markdown(_PWA_JS, unsafe_allow_html=True)
+components.html(_PWA_JS, height=0, width=0)
 
 
 # ─── 토스 스타일 CSS ───
