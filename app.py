@@ -100,7 +100,7 @@ _PWA_JS = """
 <script>
 (function() {
     var head = document.head;
-    var iconUrlRoot = window.location.origin + '/app/static/dr_icon.png';
+    var iconUrlRoot = "https://raw.githubusercontent.com/rlarjsdn-ui/DR_simulator/main/static/dr_icon.png";
 
     function addTag(tagName, attrs) {
         var checkAttr = attrs.rel ? 'rel' : (attrs.name ? 'name' : null);
