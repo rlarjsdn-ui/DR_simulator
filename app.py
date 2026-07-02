@@ -3836,7 +3836,7 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
 
     .home-bg-shell{
         width:100% !important;
-        margin:-80px auto 1rem auto !important;
+        margin:16px auto 1rem auto !important;
     }
 
     .home-dashboard-grid{
