@@ -126,7 +126,14 @@ _PWA_JS = """
 """
 
 components.html(_PWA_JS, height=0, width=0)
-
+# ─── 실시간 자동 새로고침 (5분마다) ───
+components.html("""
+<script>
+setTimeout(function() {
+    window.parent.location.reload();
+}, 300000);
+</script>
+""", height=0, width=0)
 
 # ─── 토스 스타일 CSS ───
 st.markdown("""
