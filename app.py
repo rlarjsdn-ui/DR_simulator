@@ -4730,23 +4730,28 @@ def predict_now(month, hour, weekday, is_weekend, avg_temp=20, max_temp=25, min_
 
     # REFIT 모델 피처로 변환
     # weekday: Python 0=월~6=일 그대로 사용
-    # House_Num: 평균 가정(3) 기준
+    # House_Num: 특정 가구 하나로 고정하면 그 가구의 사용 패턴에 쏠리므로
+    #            (예: 3번 가구는 5개 가구 중 두 번째로 전력을 많이 씀)
+    #            1~5번 가구 각각 예측 후 평균 내어 "평균 가정" 값을 만듭니다.
     # Day_of_Year: 월/일로 근사 계산
     import datetime as dt_module
     today = dt_module.date.today()
     day_of_year = today.timetuple().tm_yday
     minute = 0  # 현재 분은 0으로 기본
 
-    X = pd.DataFrame([{
-        'Hour':        hour,
-        'Minute':      minute,
-        'Month':       month,
-        'Is_Weekend':  int(is_weekend),
-        'Day_Num':     weekday,
-        'Day_of_Year': day_of_year,
-        'House_Num':   3,  # 평균 가정 기준
-    }])[features]
-    pred = model.predict(X)[0]
+    preds = []
+    for house_num in range(1, 6):
+        X = pd.DataFrame([{
+            'Hour':        hour,
+            'Minute':      minute,
+            'Month':       month,
+            'Is_Weekend':  int(is_weekend),
+            'Day_Num':     weekday,
+            'Day_of_Year': day_of_year,
+            'House_Num':   house_num,
+        }])[features]
+        preds.append(model.predict(X)[0])
+    pred = float(np.mean(preds))
     # W 단위로 반환 (기존 kWh와 구분)
     pred_w = round(pred, 1)
     pred_kwh = round(pred * 0.25 / 1000, 3)  # 15분 기준 kWh
