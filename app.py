@@ -2806,7 +2806,7 @@ div[data-testid="stToggle"] div[role="switch"] > div{
 }
 .billing-overview-grid{
     display:grid !important;
-    grid-template-columns:minmax(500px,1.25fr) minmax(210px,.42fr) minmax(390px,.74fr) !important;
+    grid-template-columns:minmax(500px,1.6fr) minmax(260px,.9fr) !important;
     gap:12px !important;
     align-items:stretch !important;
     margin:12px 0 12px !important;
@@ -3480,7 +3480,7 @@ div[role="tabpanel"] div[data-testid="stRadio"] label:has(input:checked){
 .center-copy-title{font-size:50px !important; line-height:1.05 !important; font-weight:900 !important;}
 .center-copy-sub{font-size:20px !important; font-weight:680 !important; line-height:1.42 !important;}
 .billing-mode-note{display:none !important;}
-.billing-overview-grid{grid-template-columns:minmax(520px,1.18fr) minmax(240px,.46fr) minmax(470px,.90fr) !important; gap:16px !important;}
+.billing-overview-grid{grid-template-columns:minmax(520px,1.6fr) minmax(260px,.9fr) !important; gap:16px !important;}
 .billing-side-note{font-size:12.3px !important; line-height:1.38 !important; max-width:260px !important; overflow-wrap:break-word !important;}
 .billing-chart-card{padding:20px 24px 18px !important; overflow:hidden !important;}
 .billing-chart-head{align-items:flex-start !important; gap:14px !important;}
@@ -5394,18 +5394,6 @@ with tab3:
                 <div class="billing-side-value">{carbon_reduction}<span>kgCO₂e</span></div>
                 <div class="billing-side-note">30년생 소나무 약 {tree_count}그루를 심는 효과</div>
             </div>
-        </div>
-
-        <div class="billing-chart-card">
-            <div class="billing-chart-head">
-                <div class="billing-chart-title">{chart_title} <span style="font-size:12px;color:#6b747e;">(kWh)</span></div>
-                <div class="billing-chart-legend">
-                    <span><i class="billing-legend-dot gray"></i>{legend_left}</span>
-                    <span><i class="billing-legend-dot yellow"></i>{legend_right}</span>
-                </div>
-            </div>
-            <div class="billing-bar-area">{bar_html}</div>
-            <div class="billing-month-row">{month_html}</div>
         </div>
     </div>
     """
