@@ -4615,7 +4615,7 @@ if "selected_city" not in st.session_state:
 alert_threshold = 150
 
 # ─── AI 모델 로드 ───
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "dr_model.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "dr_model_refit.pkl")
 
 @st.cache_data(ttl=1800)  # 30분 캐시
 def get_hourly_forecast(city_name):
