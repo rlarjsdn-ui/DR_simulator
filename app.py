@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import time
 import requests
 import plotly.graph_objects as go
@@ -86,7 +87,7 @@ def get_home_billing_summary():
             dr_hours=list(range(16, 19)),
             incentive_rate=150,
             dr_participation_rate=0.60,
-            month=datetime.now().month,
+            month=datetime.now(ZoneInfo("Asia/Seoul")).month,
             household_count=5,
         )
         return int(result.get("TOU_DR최종", default_bill)), int(result.get("누진제대비DR절약", default_saving))
@@ -4244,7 +4245,7 @@ def calc_progressive(kwh):
     billing.py가 있으면 기본요금/부가세/전력산업기반기금이 포함된 계산을 사용합니다.
     """
     if BILLING_READY and billing_calculate_progressive_bill is not None:
-        return billing_calculate_progressive_bill(kwh, month=datetime.now().month)["합계"]
+        return billing_calculate_progressive_bill(kwh, month=datetime.now(ZoneInfo("Asia/Seoul")).month)["합계"]
 
     # fallback: 기존 단순 계산
     if kwh <= 200:
@@ -4264,7 +4265,7 @@ def calc_tou(kwh, dr=False):
             monthly_kwh=kwh,
             dr_hours=list(range(16, 19)),
             incentive_rate=150,
-            month=datetime.now().month,
+            month=datetime.now(ZoneInfo("Asia/Seoul")).month,
         )
         return result["TOU_DR최종"] if dr else result["TOU"]
 
@@ -4748,7 +4749,7 @@ def predict_now(month, hour, weekday, is_weekend, avg_temp=20, max_temp=25, min_
     return pred_w, pred_w >= threshold
 
 # ─── 현재 상태 ───
-now           = datetime.now()
+now           = datetime.now(ZoneInfo("Asia/Seoul"))
 current_hour  = now.hour
 current_month = now.month
 current_price = HOURLY_PRICES[current_hour]
@@ -5640,7 +5641,7 @@ with tab3:
                 dr_hours=dr_hours_for_billing,
                 incentive_rate=incentive_rate_for_billing,
                 dr_participation_rate=dr_participation_rate_for_billing,
-                month=datetime.now().month,
+                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
                 household_count=5,
             )
             monthly_kwh = int(round(float(billing_result.get("월간환산사용량", billing_result.get("월간사용량", 300)))))
@@ -5676,7 +5677,7 @@ with tab3:
                 dr_hours=dr_hours_for_billing,
                 incentive_rate=incentive_rate_for_billing,
                 dr_participation_rate=dr_participation_rate_for_billing,
-                month=datetime.now().month,
+                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
             )
             prog = int(billing_result["누진제"])
             tou = int(billing_result["TOU"])
