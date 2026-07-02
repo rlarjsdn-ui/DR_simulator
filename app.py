@@ -3923,7 +3923,12 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
     }
 
     .home-dashboard-grid{
-        display:block !important;
+        display:flex !important;
+        flex-direction:column !important;
+    }
+
+    .center-copy{
+        order:-1 !important;
     }
 
     .left-ref-panel,
@@ -4871,6 +4876,12 @@ st.markdown(f"""
 <div class="home-bg-shell">
 <div class="home-dashboard-grid">
 
+<div class="center-copy">
+<div class="center-copy-title">Smart DR Home Scheduler</div>
+<div class="center-copy-sub">실시간으로 전기 사용 현황을 확인하고,<br>최적의 사용 시간을 추천받아 보세요.</div>
+</div>
+<div class="home-spacer"></div>
+
 <div class="glass-panel left-ref-panel">
 <div class="left-ref-title">오늘의 전기 사용,<br>가장 좋은 시간은?</div>
 <div class="left-ref-date">{now.strftime("%Y년 %m월 %d일 %H:%M")}</div>
@@ -4903,12 +4914,6 @@ st.markdown(f"""
 </div>
 </div>
 </div>
-
-<div class="center-copy">
-<div class="center-copy-title">Smart DR Home Scheduler</div>
-<div class="center-copy-sub">실시간으로 전기 사용 현황을 확인하고,<br>최적의 사용 시간을 추천받아 보세요.</div>
-</div>
-<div class="home-spacer"></div>
 
 <div class="glass-panel top-weather-card">
 <div class="weather-card-head">
