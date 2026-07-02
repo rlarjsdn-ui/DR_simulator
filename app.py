@@ -328,6 +328,14 @@ div[data-testid="stTabs"] div[data-testid="stSelectbox"]{
     background:rgba(48,50,54,.13);
 }
 
+/* 모바일 전용 히어로 타이틀: 기본(데스크탑)은 숨김, 768px 이하에서만 표시 */
+.mobile-hero-title{
+    display:none;
+    text-align:center;
+    color:rgba(255,255,255,.94);
+    text-shadow:0 2px 16px rgba(0,0,0,.30);
+}
+
 /* 가운데 카피: 하늘 위쪽 중앙 */
 .center-copy{
     grid-column:2;
@@ -3944,16 +3952,21 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
     }
 
     .center-copy{
-        width:100% !important;
-        padding:10px 0 16px !important;
+        display:none !important; /* 모바일에서는 mobile-hero-title로 대체 */
     }
 
-    .center-copy-title{
+    .mobile-hero-title{
+        display:block !important;
+        width:100% !important;
+        padding:18px 4px 16px !important;
+    }
+
+    .mobile-hero-title .center-copy-title{
         font-size:30px !important;
         line-height:1.15 !important;
     }
 
-    .center-copy-sub{
+    .mobile-hero-title .center-copy-sub{
         font-size:15px !important;
         line-height:1.45 !important;
     }
@@ -4787,6 +4800,13 @@ status_info = {
 s_tag, s_main, s_desc = status_info[status]
 
 # ─── 메인 화면 CLEAN ───
+st.markdown('''
+<div class="mobile-hero-title">
+<div class="center-copy-title">Smart DR Home Scheduler</div>
+<div class="center-copy-sub">실시간으로 전기 사용 현황을 확인하고,<br>최적의 사용 시간을 추천받아 보세요.</div>
+</div>
+''', unsafe_allow_html=True)
+
 city_list = list(CITIES.keys())
 cur_idx = city_list.index(st.session_state.selected_city)
 sel_l, sel_c, sel_r = st.columns([5.2, 2.2, 2.6])
