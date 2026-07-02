@@ -2249,7 +2249,6 @@ div[data-testid="stTabs"] > div[role="tablist"] button[data-baseweb="tab"][aria-
 }
 
 .reason-desc{
-    max-width:calc(100% - 86px);
     color:#4d5661 !important;
     font-size:12.5px;
     line-height:1.45;
@@ -2258,16 +2257,19 @@ div[data-testid="stTabs"] > div[role="tablist"] button[data-baseweb="tab"][aria-
 }
 
 .reason-tag{
-    position:absolute;
-    right:16px;
-    bottom:15px;
+    display:inline-flex;
+    margin-top:10px;
+    width:max-content;
+    max-width:100%;
     padding:6px 11px;
     border-radius:999px;
     background:rgba(255,228,118,.76);
     color:#202124;
     font-size:11px;
     font-weight:850;
-    white-space:nowrap;
+    white-space:normal;
+    word-break:keep-all;
+    line-height:1.3;
 }
 
 .top3-grid.v2{
