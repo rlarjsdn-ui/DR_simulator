@@ -3884,9 +3884,11 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
 
     .dr-notice-card{
         order:5 !important;
-        grid-column:1 / span 2 !important;
+        grid-column:1 !important;
         grid-row:auto !important;
+        align-self:start !important;
         margin-top:0 !important;
+        min-height:0 !important;
     }
 
     /* 태블릿에서 날씨 카드 폭이 넓어져도 내부 요소가 벌어지지 않게 콤팩트하게 정렬 */
