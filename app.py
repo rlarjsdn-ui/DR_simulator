@@ -3887,8 +3887,13 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
         grid-column:1 !important;
         grid-row:auto !important;
         align-self:start !important;
-        margin-top:0 !important;
+        width:88% !important;
+        margin-top:-18px !important;
+        margin-left:6% !important;
         min-height:0 !important;
+        position:relative !important;
+        z-index:20 !important;
+        box-shadow:0 18px 40px rgba(0,0,0,.16) !important;
     }
 
     /* 태블릿에서 날씨 카드 폭이 넓어져도 내부 요소가 벌어지지 않게 콤팩트하게 정렬 */
