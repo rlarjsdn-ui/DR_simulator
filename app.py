@@ -3842,7 +3842,13 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
     .home-dashboard-grid{
         grid-template-columns:1fr 1fr !important;
         grid-template-rows:auto !important;
+        align-items:start !important;
         gap:18px !important;
+    }
+
+    .top-weather-card,
+    .right-ai-panel{
+        min-height:0 !important;
     }
 
     /* 태블릿에서 카드 순서를 명확히 고정: 타이틀 → 오늘의 전기사용 → 날씨/AI → DR알림 */
@@ -3881,6 +3887,13 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
         grid-column:1 / span 2 !important;
         grid-row:auto !important;
         margin-top:0 !important;
+    }
+
+    /* 태블릿에서 날씨 카드 폭이 넓어져도 내부 요소가 벌어지지 않게 콤팩트하게 정렬 */
+    .weather-card-body{
+        grid-template-columns:max-content max-content !important;
+        justify-content:flex-start !important;
+        gap:24px !important;
     }
 
     .home-spacer{
