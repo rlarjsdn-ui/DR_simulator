@@ -53,6 +53,7 @@ except Exception:
     SCHEDULER_READY = False
 
 REFIT_BILLING_DATA_FILE = "REFIT_House_1_2_3_4_5_15min_AI_Dataset.csv"
+REFIT_BILLING_DATA_FILE_GZ = REFIT_BILLING_DATA_FILE + ".gz"
 
 @st.cache_data(show_spinner=False)
 def load_refit_billing_data():
@@ -61,6 +62,11 @@ def load_refit_billing_data():
         REFIT_BILLING_DATA_FILE,
         os.path.join(os.getcwd(), "data", REFIT_BILLING_DATA_FILE),
         os.path.join(os.getcwd(), REFIT_BILLING_DATA_FILE),
+        # 용량 문제로 gzip 압축본을 올린 경우도 자동으로 찾아 읽습니다. (pandas가 .gz를 자동 압축 해제)
+        os.path.join("data", REFIT_BILLING_DATA_FILE_GZ),
+        REFIT_BILLING_DATA_FILE_GZ,
+        os.path.join(os.getcwd(), "data", REFIT_BILLING_DATA_FILE_GZ),
+        os.path.join(os.getcwd(), REFIT_BILLING_DATA_FILE_GZ),
     ]
     for fp in search_paths:
         if os.path.exists(fp):
