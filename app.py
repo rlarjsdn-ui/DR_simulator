@@ -3845,30 +3845,46 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
         gap:18px !important;
     }
 
-    .left-ref-panel{
-        grid-column:1 / span 2 !important;
-        grid-row:auto !important;
-        transform:none !important;
-        min-height:auto !important;
-    }
-
+    /* 태블릿에서 카드 순서를 명확히 고정: 타이틀 → 오늘의 전기사용 → 날씨/AI → DR알림 */
     .center-copy{
+        order:1 !important;
         grid-column:1 / span 2 !important;
         grid-row:auto !important;
         width:100% !important;
         padding-top:10px !important;
     }
 
+    .left-ref-panel{
+        order:2 !important;
+        grid-column:1 / span 2 !important;
+        grid-row:auto !important;
+        transform:none !important;
+        min-height:auto !important;
+    }
+
     .top-weather-card{
+        order:3 !important;
         grid-column:1 !important;
         grid-row:auto !important;
         margin-top:0 !important;
     }
 
     .right-ai-panel{
+        order:4 !important;
         grid-column:2 !important;
         grid-row:auto !important;
         margin-top:0 !important;
+    }
+
+    .dr-notice-card{
+        order:5 !important;
+        grid-column:1 / span 2 !important;
+        grid-row:auto !important;
+        margin-top:0 !important;
+    }
+
+    .home-spacer{
+        display:none !important;
     }
 
     .bottom-dashboard-row{
