@@ -5028,6 +5028,38 @@ with tab2:
                 return recs
 
             appliance_recs = _enforce_washer_dryer_chain(appliance_recs, selected)
+
+            # DR 인센티브를 실제 절감액에 반영합니다.
+            # 개념: 기존 생활패턴이라면 DR 시간대에 사용했을 시간을, 추천 스케줄이 피했다면
+            # 그만큼(kWh)에 대해 보상 단가를 곱한 인센티브를 절감액에 더합니다.
+            # 반대로 추천 스케줄도 DR 시간대를 여전히 사용한다면 인센티브는 0입니다.
+            def _apply_dr_incentive(recs, selected_map, dr_on, dr_hour_list, reward):
+                if not dr_on or not dr_hour_list:
+                    return recs
+                dr_set = set(dr_hour_list)
+                for rec in recs:
+                    name = rec.get("name")
+                    watt = float(selected_map.get(name, {}).get("watt", 0))
+                    baseline_start = rec.get("baseline_start", rec.get("start", 0))
+                    baseline_hours = float(rec.get("hours", 0))
+                    rec_start = rec.get("start", 0)
+                    rec_hours = float(rec.get("hours", 0))
+                    baseline_dr_h = schedule_hours(baseline_start, baseline_hours) & dr_set
+                    recommend_dr_h = schedule_hours(rec_start, rec_hours) & dr_set
+                    avoided_h = max(len(baseline_dr_h) - len(recommend_dr_h), 0)
+                    if avoided_h <= 0:
+                        continue
+                    incentive = int(round(watt / 1000 * avoided_h * reward))
+                    if incentive <= 0:
+                        continue
+                    rec["cost"] = max(0, int(rec.get("cost", 0)) - incentive)
+                    baseline_cost = int(rec.get("baseline_cost", rec.get("now_cost", 0)))
+                    rec["saving"] = max(baseline_cost - rec["cost"], 0)
+                    rec["dr_incentive"] = incentive
+                return recs
+
+            appliance_recs = _apply_dr_incentive(appliance_recs, selected, dr_mode, dr_hours, dr_reward)
+
             st.session_state["last_schedule_recs"] = [dict(r) for r in appliance_recs]
             st.session_state["last_schedule_selected"] = {k: dict(v) for k, v in selected.items()}
             sorted_recs = sorted(appliance_recs, key=lambda r: (r["start"], r["name"]))
