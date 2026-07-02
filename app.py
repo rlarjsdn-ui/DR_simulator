@@ -5490,5 +5490,636 @@ with tab2:
                 dr_hours=dr_hours,
                 dr_reward=dr_reward,
             )
+            # 세탁기·건조기 세트 최종 보정: 어떤 계산 경로를 타더라도 건조기가 세탁기 직후에 오도록 강제합니다.
+            def _enforce_washer_dryer_chain(recs, selected_map):
+                names = {r.get("name"): r for r in recs}
+                if "세탁기" not in names or "건조기" not in names:
+                    return recs
+                washer = names["세탁기"]
+                dryer = names["건조기"]
+                washer_start = float(washer.get("start", 0)) % 24
+                washer_hours = float(washer.get("hours", selected_map.get("세탁기", {}).get("hours", 2)))
+                dryer_hours = float(dryer.get("hours", selected_map.get("건조기", {}).get("hours", 2)))
+                # 건조기는 세탁 종료 직후를 우선 적용합니다.
+                dryer_start = (washer_start + washer_hours) % 24
+                dryer["start"] = dryer_start
+                dryer["hours"] = dryer_hours
+                dryer["cost"] = int(calc_appliance_cost(selected_map["건조기"]["watt"], dryer_hours, dryer_start, dr_mode, dr_hours, dr_reward))
+                dryer["saving"] = max(int(dryer.get("baseline_cost", dryer.get("now_cost", 0))) - dryer["cost"], 0)
+                dryer["tag"] = "세탁 직후 건조"
+                dryer["reason"] = "세탁기와 건조기를 하나의 세탁·건조 세트로 묶어, 세탁 종료 직후 건조기가 이어지도록 배치했습니다. 사용 순서를 우선 만족한 뒤, DR 시간대와 소음 시간대를 함께 고려했습니다."
+                washer["tag"] = "세탁·건조 세트"
+                washer["reason"] = "건조기와 함께 등록되어 세탁·건조를 하나의 연속 작업으로 판단했습니다. 세탁이 먼저 끝나야 건조가 가능하므로, 건조기가 바로 이어질 수 있는 시간대를 우선 선택했습니다."
+                return recs
 
-            # 세탁기
+            appliance_recs = _enforce_washer_dryer_chain(appliance_recs, selected)
+
+            # 에어컨 기온 영향 비교: "쾌적한 기준 기온(24℃)이었다면" 대비
+            # 오늘 실제 기온 때문에 얼마나 더 오래 쓰고, 그만큼 요금이 얼마나 더 나오는지 계산합니다.
+            def _apply_ac_temp_impact(recs, selected_map, fallback_temp, hourly_temps_map):
+                if "에어컨" not in selected_map:
+                    return recs
+                for rec in recs:
+                    if rec.get("name") != "에어컨":
+                        continue
+                    watt = float(selected_map["에어컨"]["watt"])
+                    requested_hours = float(selected_map["에어컨"].get("hours", rec.get("hours", 1)))
+                    actual_hours = float(rec.get("hours", requested_hours))
+                    start = rec.get("start", current_hour)
+
+                    # 표시용 기온은 "지금 이 순간"이 아니라, 실제 사용시간 계산에 쓰인
+                    # "에어컨이 추천된 그 시각의 예보 기온"을 그대로 가져옵니다.
+                    start_hour_int = int(start) % 24
+                    if hourly_temps_map:
+                        display_temp = hourly_temps_map.get(start_hour_int, fallback_temp)
+                    else:
+                        display_temp = fallback_temp
+
+                    # "쾌적한 날(24℃ 기준)"이었다면 recommend_aircon_schedule의 마지막 분기와 동일하게
+                    # 최대 1시간만 사용한다고 가정합니다.
+                    baseline_hours = min(requested_hours, 1)
+                    baseline_cost = calc_appliance_cost(watt, baseline_hours, start, dr_mode, dr_hours, dr_reward)
+
+                    extra_hours = round(max(actual_hours - baseline_hours, 0), 2)
+                    extra_cost = max(int(rec.get("cost", 0)) - int(round(baseline_cost)), 0)
+
+                    rec["temp_now"] = round(display_temp, 1) if display_temp is not None else None
+                    rec["temp_baseline_hours"] = baseline_hours
+                    rec["temp_extra_hours"] = extra_hours
+                    rec["temp_extra_cost"] = extra_cost
+                return recs
+
+            appliance_recs = _apply_ac_temp_impact(appliance_recs, selected, _temp, hourly_temps_for_schedule)
+
+            dr_bonus_info = calculate_schedule_dr_bonus(
+                appliance_recs,
+                selected,
+                dr_mode=dr_mode,
+                dr_hours=dr_hours,
+                dr_reward=dr_reward,
+                participation_rate=0.60,
+                cap_ratio=0.10,
+            )
+            st.session_state["last_schedule_recs"] = [dict(r) for r in appliance_recs]
+            st.session_state["last_schedule_selected"] = {k: dict(v) for k, v in selected.items()}
+            st.session_state["last_schedule_dr_bonus"] = dict(dr_bonus_info)
+            st.session_state["last_schedule_dr_mode"] = bool(dr_mode)
+            sorted_recs = sorted(appliance_recs, key=lambda r: (r["start"], r["name"]))
+
+            # ── 1) 계산 직후 가장 먼저 보이는 추천 스케줄표 ──
+            hour_header = '<div class="smart-schedule-corner">가전 / 시간</div>'
+            for h in range(24):
+                is_dr_h = dr_mode and (h in dr_hours)
+                hour_header += f'<div class="smart-hour-cell{" dr" if is_dr_h else ""}">{h:02d}</div>'
+
+            rows_html = ""
+            for rec in sorted_recs:
+                cells = "".join([
+                    '<div class="smart-track-bg"></div>'
+                    for h in range(24)
+                ])
+                dr_overlay = ""
+                if dr_mode and dr_hours:
+                    dr_overlay = f'<div class="smart-dr-window" style="grid-column:{dr_start+1} / span {max(1, dr_end-dr_start)};grid-row:1;"></div>' 
+                s = int(rec["start"] % 24)
+                span = max(1, int(np.ceil(rec["hours"])))
+                variant = rec["variant"] if rec["variant"] else "normal"
+                time_label = f'{fmt_time(rec["start"])} – {fmt_time(rec["start"] + rec["hours"])}'
+
+                blocks = ""
+                compact_cls = " compact" if span <= 1 else ""
+                if s + span <= 24:
+                    blocks += (
+                        f'<div class="smart-event {variant}{compact_cls}" style="grid-column:{s+1} / span {span};grid-row:1;">'
+                        f'<div class="smart-event-name">{rec["icon"]} {rec["name"]}</div>'
+                        f'<div class="smart-event-time">{time_label}</div></div>'
+                    )
+                else:
+                    first_span = 24 - s
+                    second_span = span - first_span
+                    first_compact = " compact" if first_span <= 1 else ""
+                    second_compact = " compact" if second_span <= 1 else ""
+                    blocks += (
+                        f'<div class="smart-event {variant}{first_compact}" style="grid-column:{s+1} / span {first_span};grid-row:1;">'
+                        f'<div class="smart-event-name">{rec["icon"]} {rec["name"]}</div>'
+                        f'<div class="smart-event-time">{time_label}</div></div>'
+                    )
+                    blocks += (
+                        f'<div class="smart-event {variant}{second_compact}" style="grid-column:1 / span {min(second_span,24)};grid-row:1;">'
+                        f'<div class="smart-event-name">{rec["icon"]} {rec["name"]}</div>'
+                        f'<div class="smart-event-time">다음날 이어짐</div></div>'
+                    )
+
+                rows_html += (
+                    f'<div class="smart-schedule-row">'
+                    f'<div class="smart-device-label"><div class="smart-device-name">{rec["icon"]} {rec["name"]}</div>'
+                    f'<div class="smart-device-meta">{rec["hours"]}시간 · {rec["cost"]:,}원</div></div>'
+                    f'<div class="smart-track">{cells}{dr_overlay}{blocks}</div>'
+                    f'</div>'
+                )
+
+            best_range = f'{fmt_hour_label(opt_h)} – {fmt_hour_label(opt_h + display_duration)}'
+            st.markdown(f'''
+            <div class="schedule-result-panel">
+              <div class="schedule-result-head clean">
+                <div>
+                  <div class="schedule-result-title">오늘 추천 스케줄표</div>
+                  <div class="schedule-result-sub">등록한 가전과 생활패턴을 반영해 오늘 사용하기 좋은 시간대를 배치했습니다.</div>
+                </div>
+              </div>
+              <div class="smart-schedule-board">
+                <div class="smart-schedule-hours">{hour_header}</div>
+                {rows_html}
+              </div>
+              <div class="smart-schedule-legend">
+                <span><i class="legend-dot"></i>추천 사용 시간</span>
+                <span><i class="legend-dot dr"></i>DR 시간대</span>
+                <span>· 시간은 24시간 기준으로 표시됩니다.</span>
+              </div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+            # ── 2) 절감 요약 카드 ──
+            # 표시된 가전별 추천 시간표와 같은 기준으로 합산합니다.
+            # 기존 생활패턴 기준: 일반 가정의 기본 사용 시간대에 사용한다고 가정한 총 요금
+            # 추천 스케줄 적용: 위 추천 시간표에 배치된 가전별 추천 시간의 총 요금
+            now_display_cost = int(sum(rec.get("baseline_cost", rec.get("now_cost", 0)) for rec in sorted_recs)) if sorted_recs else int(now_cost)
+            recommend_display_cost = int(sum(rec.get("cost", 0) for rec in sorted_recs)) if sorted_recs else int(opt_cost)
+            tou_saving = max(now_display_cost - recommend_display_cost, 0)
+            dr_bonus_amount = int(dr_bonus_info.get("bonus", 0)) if dr_mode else 0
+            total_saving = tou_saving + dr_bonus_amount
+            recommend_net_cost = max(recommend_display_cost - dr_bonus_amount, 0)
+            display_sav_pct = round(total_saving / now_display_cost * 100) if now_display_cost > 0 else 0
+            dr_bonus_note = (
+                f"DR 회피 인정량&nbsp;{dr_bonus_info.get('recognized_kwh', 0):.2f} kWh&nbsp;×&nbsp;{dr_reward}원/kWh"
+                if dr_mode and dr_bonus_amount > 0
+                else "DR 미참여 상태라 보상금은 반영하지 않았습니다."
+            )
+            st.markdown(f'''
+            <div class="saving-summary-card dr-split-summary">
+              <div class="saving-summary-left">
+                <div class="saving-summary-label">절감 요약</div>
+                <div class="saving-summary-main">
+                  기존 생활패턴 기준 <strong>{now_display_cost:,}원</strong>
+                  <span class="saving-arrow">→</span>
+                  추천 스케줄 적용 <strong>{recommend_net_cost:,}원</strong>
+                </div>
+                <div class="saving-summary-sub">
+                  <div><strong>DR 미참여 절감액</strong> · 시간대별 요금제(TOU) 최적화로 <b>{tou_saving:,}원</b> 절감</div>
+                  <div><strong>DR 참여 추가 절감액</strong> · DR 회피 보상금 <b>{dr_bonus_amount:,}원</b> 반영</div>
+                  <div><strong>총 절감액</strong> · TOU 절감액 + DR 보상금 = <b>{total_saving:,}원</b></div>
+                </div>
+              </div>
+              <div class="saving-summary-right">
+              <div class="saving-summary-chip">총 예상 절감</div>
+              <div class="saving-summary-save">{total_saving:,}원</div>
+              <div class="saving-summary-rate">약 {display_sav_pct}% 절감</div>
+             </div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+            # ── 3) 가전별 상세 추천 이유 ──
+            st.markdown('<div class="section-lbl reason-title">가전별 추천 이유</div>', unsafe_allow_html=True)
+            detail_cards = ""
+            for rec in sorted_recs:
+                time_label = f'{fmt_time(rec["start"])} – {fmt_time(rec["start"] + rec["hours"])}'
+                saving_txt = f'{rec["saving"]:,}원 절감' if rec["saving"] > 0 else "비용 차이 적음"
+
+                short_reason = rec.get("reason", "시간대별 요금제(TOU), DR 시간대, 생활패턴 제약을 함께 반영해 추천했습니다.")
+
+                temp_badge = ""
+                if rec.get("name") == "에어컨" and "temp_extra_hours" in rec:
+                    if rec["temp_extra_hours"] > 0:
+                        temp_badge = f'<span>🌡️ {rec["temp_now"]}℃ 영향 · +{rec["temp_extra_hours"]}시간 · +{rec["temp_extra_cost"]:,}원</span>'
+                    else:
+                        temp_badge = f'<span>🌡️ {rec["temp_now"]}℃ · 쾌적 기준, 추가 부담 없음</span>'
+
+                detail_cards += (
+                    f'<div class="reason-card">'
+                    f'<div class="reason-card-main">'
+                    f'<div class="reason-device">{rec["icon"]} {rec["name"]}</div>'
+                    f'<div class="reason-time">{time_label}</div>'
+                    f'</div>'
+                    f'<div class="reason-metrics"><span>{rec["cost"]:,}원</span><span>{saving_txt}</span>{temp_badge}</div>'
+                    f'<div class="reason-desc">{short_reason}</div>'
+                    f'<div class="reason-tag">{rec["tag"]}</div>'
+                    f'</div>'
+                )
+            st.markdown(f'<div class="reason-card-grid">{detail_cards}</div>', unsafe_allow_html=True)
+
+# ══════════════════════════════════════════
+# 탭3 — 요금 비교
+# ══════════════════════════════════════════
+with tab3:
+    def _html_block(html: str):
+        if hasattr(st, "html"):
+            st.html(html)
+        else:
+            st.markdown(html, unsafe_allow_html=True)
+
+    _html_block("""
+    <div class="billing-report-head">
+        <div class="billing-report-title">REFIT 5개 가구 평균 기반 요금 비교</div>
+        <div class="billing-report-desc">
+            REFIT House 1~5의 15분 단위 전력 데이터를 평균 사용량으로 환산하고, 최근 사용 패턴이 유지된다고 가정했을 때의 월간 환산 요금을 비교합니다.<br>
+            실제 미래 요금을 단정하는 값이 아니라, 동일 사용 패턴에서 누진제·시간대별 요금제(TOU)·수요반응(DR) 참여에 따른 상대적 절감 효과를 보여주는 지표입니다.
+        </div>
+    </div>
+    """)
+
+    DATA_FILE_NAME = REFIT_BILLING_DATA_FILE
+
+    billing_mode = st.radio(
+        "사용량 산정 방식",
+        ["REFIT 5개 가구 평균 기반", "직접 조정"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="billing_mode",
+    )
+
+    df_refit, data_path = load_refit_billing_data()
+    recent_days = 30
+    dr_hours_for_billing = list(range(16, 19))
+    incentive_rate_for_billing = 150
+    dr_participation_rate_for_billing = 0.60
+
+    billing_result = None
+    usage_source = ""
+    mode_note = ""
+    monthly_usage_df = None
+    data_period_note = ""
+
+    if billing_mode == "REFIT 5개 가구 평균 기반" and df_refit is not None and BILLING_READY and billing_simulate_recent_pattern_bills is not None:
+        try:
+            billing_result = billing_simulate_recent_pattern_bills(
+                df_refit,
+                recent_days=recent_days,
+                dr_hours=dr_hours_for_billing,
+                incentive_rate=incentive_rate_for_billing,
+                dr_participation_rate=dr_participation_rate_for_billing,
+                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+                household_count=5,
+            )
+            monthly_kwh = int(round(float(billing_result.get("월간환산사용량", billing_result.get("월간사용량", 300)))))
+            prog = int(billing_result["누진제"])
+            tou = int(billing_result["TOU"])
+            dr = int(billing_result["TOU_DR최종"])
+            monthly_usage_df = billing_result.get("월별사용량")
+            data_start = billing_result.get("데이터시작")
+            data_end = billing_result.get("데이터끝")
+            recent_observed = billing_result.get("최근기간사용량", 0)
+            recent_covered = billing_result.get("최근기간일수", recent_days)
+            total_recent_observed = billing_result.get("최근기간전체사용량", 0)
+            avg_house_count = billing_result.get("가구평균환산가구수", 5)
+            usage_source = f"REFIT {avg_house_count}개 가구 평균 · 최근 {recent_covered}일 기준"
+            data_period_note = f"데이터 기간: {pd.to_datetime(data_start).strftime('%Y-%m-%d')} ~ {pd.to_datetime(data_end).strftime('%Y-%m-%d')}" if data_start is not None and data_end is not None else ""
+            mode_note = "REFIT House 1~5의 15분 누적 전력 데이터를 kWh로 변환한 뒤 5개 가구 평균으로 나누고, 최근 사용 패턴이 30일간 유지된다고 가정해 월간 환산 요금을 계산했습니다."
+        except Exception as e:
+            st.warning(f"REFIT 데이터 기반 요금 계산 중 오류가 발생해 직접 조정 방식으로 전환합니다: {e}")
+            billing_mode = "직접 조정"
+
+    if billing_mode == "REFIT 5개 가구 평균 기반" and df_refit is None:
+        st.info(f"data 폴더에서 `{DATA_FILE_NAME}` 파일을 찾지 못했습니다. 파일을 `C:\\SmartEnergy\\Project\\data` 폴더에 넣으면 REFIT 데이터 기반 계산이 활성화됩니다.")
+        billing_mode = "직접 조정"
+
+    if billing_result is None:
+        estimated_kwh = 300
+        monthly_kwh = st.slider("월간 환산 사용량 (kWh)", 100, 600, estimated_kwh, 10)
+        usage_source = "직접 조정한 월간 환산 사용량 기준"
+        mode_note = "REFIT 데이터 파일이 없거나 직접 조정을 선택한 경우, 입력한 월간 사용량을 기준으로 요금제를 비교합니다."
+        if BILLING_READY and billing_simulate_monthly_bills is not None:
+            billing_result = billing_simulate_monthly_bills(
+                monthly_kwh=monthly_kwh,
+                dr_hours=dr_hours_for_billing,
+                incentive_rate=incentive_rate_for_billing,
+                dr_participation_rate=dr_participation_rate_for_billing,
+                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+            )
+            prog = int(billing_result["누진제"])
+            tou = int(billing_result["TOU"])
+            dr = int(billing_result["TOU_DR최종"])
+        else:
+            prog = calc_progressive(monthly_kwh)
+            tou  = calc_tou(monthly_kwh, False)
+            dr   = calc_tou(monthly_kwh, True)
+
+    expected_bill = dr
+    monthly_effect = prog - dr
+    annual_effect = monthly_effect * 12
+    saving_rate = abs(monthly_effect) / prog * 100 if prog else 0
+
+    if monthly_effect >= 0:
+        effect_value = f"{monthly_effect:,}원"
+        effect_label = "월간 환산 절감액"
+        effect_pill = f"약 {saving_rate:.1f}% 절감"
+        bill_sub = f"기존 누진제 대비 {monthly_effect:,}원 절감"
+        save_class = "good"
+        progress = min(100, max(12, int(round(saving_rate * 12))))
+    else:
+        effect_value = f"{abs(monthly_effect):,}원"
+        effect_label = "월간 환산 추가 부담"
+        effect_pill = f"약 {saving_rate:.1f}% 높음"
+        bill_sub = f"현재 조건에서는 기존 누진제 대비 {abs(monthly_effect):,}원 높음"
+        save_class = ""
+        progress = 38
+
+    tou_delta = prog - tou
+    dr_delta = prog - dr
+    tou_sub = f"기존 누진제 대비 {tou_delta:,}원 절감" if tou_delta >= 0 else f"기존 누진제 대비 {abs(tou_delta):,}원 높음"
+    dr_sub = f"기존 누진제 대비 {dr_delta:,}원 절감" if dr_delta >= 0 else f"기존 누진제 대비 {abs(dr_delta):,}원 높음"
+    tou_rate = abs(tou_delta) / prog * 100 if prog else 0
+    dr_rate = abs(dr_delta) / prog * 100 if prog else 0
+    tou_chip_class = "good" if tou_delta >= 0 else ""
+    dr_chip_class = "best" if dr_delta >= 0 else ""
+
+    # 월별 그래프: REFIT 데이터가 있으면 실제 월별 사용량, 없으면 월간 환산값 기반 예시 추이
+    if monthly_usage_df is not None and len(monthly_usage_df) > 0:
+        monthly_tail = monthly_usage_df.tail(6).copy()
+        months = [str(m)[5:] + "월" if len(str(m)) >= 7 else str(m) for m in monthly_tail["월"].tolist()]
+        usage_2025 = [int(round(float(v))) for v in monthly_tail["사용량(kWh)"].tolist()]
+        # 일부 데이터프레임이 5가구 합산 월별 사용량을 담고 있으면 그래프도 평균으로 환산합니다.
+        if usage_2025 and max(usage_2025) > max(int(monthly_kwh) * 1.8, 700):
+            usage_2025 = [int(round(v / 5)) for v in usage_2025]
+        avg_usage = int(round(sum(usage_2025) / len(usage_2025))) if usage_2025 else int(monthly_kwh)
+        usage_2024 = [avg_usage for _ in usage_2025]
+        chart_title = "REFIT 평균 월별 사용량"
+        legend_left = "최근 6개월 평균"
+        legend_right = "월별 평균"
+    else:
+        months = ["1월", "2월", "3월", "4월", "5월", "6월"]
+        multipliers_2025 = [1.30, 1.17, 1.23, 1.07, .97, 1.00]
+        usage_2025 = [int(round(monthly_kwh * m / 10) * 10) for m in multipliers_2025]
+        usage_2025[-1] = int(monthly_kwh)
+        usage_2024 = [int(round(v * r / 10) * 10) for v, r in zip(usage_2025, [1.09, 1.08, 1.10, 1.14, 1.11, 1.04])]
+        chart_title = "월별 전기 사용량 추이"
+        legend_left = "비교 기준"
+        legend_right = "월간 환산"
+
+    chart_max = max(1, max(usage_2024 + usage_2025) + 30)
+    bar_html = ""
+    for i, m in enumerate(months):
+        h24 = max(8, usage_2024[i] / chart_max * 100)
+        h25 = max(8, usage_2025[i] / chart_max * 100)
+        current_cls = " current" if i == len(months) - 1 else ""
+        bar_html += (
+            f'<div class="billing-bar-group">'
+            f'<div class="billing-bar gray" style="height:{h24:.1f}%"><span class="billing-bar-value">{usage_2024[i]}</span></div>'
+            f'<div class="billing-bar yellow{current_cls}" style="height:{h25:.1f}%"><span class="billing-bar-value">{usage_2025[i]}</span></div>'
+            f'</div>'
+        )
+    month_html = "".join([f"<div>{m}</div>" for m in months])
+
+    last_month_kwh = usage_2025[-2] if len(usage_2025) >= 2 else int(monthly_kwh)
+    kwh_diff = int(monthly_kwh) - int(last_month_kwh)
+    if kwh_diff <= 0:
+        usage_note = f"직전 월 {last_month_kwh} kWh 대비 ↓ {abs(kwh_diff)} kWh"
+    else:
+        usage_note = f"직전 월 {last_month_kwh} kWh 대비 ↑ {kwh_diff} kWh"
+
+    carbon_reduction = max(0, round(abs(monthly_effect) / max(prog, 1) * monthly_kwh * 0.478, 1))
+    tree_count = max(1, int(round(carbon_reduction / 6.6)))
+
+    # 설명 문구는 계산 기준 카드에 통합되어 상단 중복 문구는 표시하지 않습니다.
+
+    billing_top_html = f"""
+    <div class="billing-overview-grid">
+        <div class="billing-bill-card">
+            <div>
+                <div class="billing-card-label">평균 월간 환산 요금</div>
+                <div class="billing-bill-value">{expected_bill:,}원</div>
+                <div class="billing-card-sub">{bill_sub}</div>
+            </div>
+            <div class="billing-divider"></div>
+            <div>
+                <div class="billing-save-title">{effect_label}</div>
+                <div class="billing-save-value {save_class}">{effect_value}</div>
+                <div class="billing-save-pill">{effect_pill}</div>
+                <div class="billing-card-sub" style="margin-top:14px;">기존 누진제 {prog:,}원<br><span class="billing-sub-arrow">↓</span> 환산 요금 {expected_bill:,}원</div>
+            </div>
+        </div>
+
+        <div class="billing-side-stack">
+            <div class="billing-side-card">
+                <div class="billing-side-label">평균 월간 환산 사용량</div>
+                <div class="billing-side-value">{monthly_kwh}<span>kWh</span></div>
+                <div class="billing-side-note"><span>{usage_note}</span><span>{usage_source}</span></div>
+            </div>
+            <div class="billing-side-card soft">
+                <div class="billing-side-label">예상 탄소 절감량</div>
+                <div class="billing-side-value">{carbon_reduction}<span>kgCO₂e</span></div>
+                <div class="billing-side-note">30년생 소나무 약 {tree_count}그루를 심는 효과</div>
+            </div>
+        </div>
+
+    </div>
+    """
+    _html_block(billing_top_html)
+
+    dr_incentive = int(billing_result.get("DR인센티브", 0)) if isinstance(billing_result, dict) else 0
+    dr_reduced = billing_result.get("DR감축량", 0) if isinstance(billing_result, dict) else 0
+
+    billing_bottom_html = f"""
+    <div class="billing-lower-grid">
+        <div class="billing-compare-wrap">
+            <div class="billing-section-title">요금제별 월간 환산 요금 비교 <span>REFIT 평균 사용 패턴 · {monthly_kwh} kWh/월</span></div>
+            <div class="billing-compare-grid">
+                <div class="billing-plan-card">
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">기존 누진제</div>
+                        <div class="billing-plan-value">{prog:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">현행 주택용 누진제를 적용한<br>월간 환산 청구액입니다.</div>
+                    <div class="billing-plan-chip">기존 요금</div>
+                </div>
+                <div class="billing-plan-card">
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">시간대별 요금제(TOU)</div>
+                        <div class="billing-plan-value">{tou:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">경부하·중간부하·최대부하 단가를 적용한<br>월간 환산 요금입니다.</div>
+                    <div class="billing-plan-chip {tou_chip_class}">{tou_sub}<span>약 {tou_rate:.1f}%</span></div>
+                </div>
+                <div class="billing-plan-card recommend">
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">시간대별 요금제(TOU) + DR 참여</div>
+                        <div class="billing-plan-value">{dr:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">DR 참여율 60%와 보상 상한을 적용했습니다.<br>보상 {dr_incentive:,}원을 반영한 결과입니다.</div>
+                    <div class="billing-plan-chip {dr_chip_class}">{dr_sub}<span>약 {dr_rate:.1f}%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="billing-point-card">
+            <div class="billing-point-title">계산 기준</div>
+            <div class="billing-point-list">
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>REFIT 5개 가구 데이터를 평균 사용량으로 환산했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>최근 사용 패턴이 유지된다고 가정해 30일 요금을 계산했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>시간대별 요금제(TOU)는 경부하·중간부하·최대부하 3단계 단가를 적용했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>DR 보상은 참여율 60%와 월 사용량 10% 상한을 반영했습니다.</span></div>
+            </div>
+            <div class="billing-progress-box">
+                <div class="billing-progress-text"><span>월간 환산 절감 효과</span><strong>{progress}%</strong></div>
+                <div class="billing-progress-track"><div class="billing-progress-fill" style="width:{progress}%"></div></div>
+            </div>
+        </div>
+    </div>
+    """
+    _html_block(billing_bottom_html)
+
+
+# ══════════════════════════════════════════
+# 탭 Simulator — 최적화 적용 전후 비교
+# ══════════════════════════════════════════
+with tab_sim:
+    def _sim_html(html: str):
+        if hasattr(st, "html"):
+            st.html(html)
+        else:
+            st.markdown(html, unsafe_allow_html=True)
+
+    _sim_html("""
+    <div class="sim-report-head">
+        <div class="sim-report-title">최적화 시뮬레이터 적용 전후 비교</div>
+        <div class="sim-report-desc">
+            등록한 가전 중 스케줄 조정이 가능한 사용량을 기준으로 기존 사용 방식과 추천 스케줄 적용 후의 비용을 비교합니다.<br>
+            집 전체 전기요금이 아니라, 등록 가전 중 스케줄 조정 가능한 사용량의 비용 절감 효과를 보여줍니다.
+        </div>
+    </div>
+    """)
+
+    schedule_recs = st.session_state.get("last_schedule_recs", [])
+
+    if not schedule_recs:
+        _sim_html("""
+        <div class="sim-chart-card">
+            <div class="sim-section-title">
+                <div>등록 가전별 절감 효과</div>
+                <span>Schedule 탭에서 가전을 등록하고 최적 시간 계산을 먼저 실행해 주세요.</span>
+            </div>
+            <div style="padding:24px 8px;color:#4e5968;font-weight:700;line-height:1.6;">
+                이 화면은 Schedule 탭에서 계산된 가전별 추천 시간과 기존 생활패턴 기준 사용 시간을 비교해,<br>
+                실제 등록한 가전별 절감액과 총 절감액만 보여줍니다.
+            </div>
+        </div>
+        """)
+    else:
+        rows = []
+        for rec in schedule_recs:
+            before = int(round(rec.get("baseline_cost", rec.get("now_cost", 0))))
+            after = int(round(rec.get("cost", 0)))
+            saving = max(0, before - after)
+            rate = saving / before * 100 if before else 0
+            rows.append({
+                "name": rec.get("name", "가전"),
+                "icon": rec.get("icon", "⚡"),
+                "before": before,
+                "after": after,
+                "saving": saving,
+                "rate": rate,
+                "start": rec.get("start", 0),
+                "hours": rec.get("hours", 0),
+            })
+
+        total_before = sum(r["before"] for r in rows)
+        total_after = sum(r["after"] for r in rows)
+        total_saving = max(0, total_before - total_after)
+        total_rate = total_saving / total_before * 100 if total_before else 0
+        max_cost = max([total_before] + [r["before"] for r in rows]) or 1
+
+        bar_html = ""
+        for r in rows:
+            before_w = max(8, r["before"] / max_cost * 100)
+            after_w = max(8, r["after"] / max_cost * 100)
+            bar_html += f"""
+            <div class="sim-bar-row">
+                <div class="sim-bar-name">{r['icon']} {r['name']}</div>
+                <div class="sim-bar-pair">
+                    <div class="sim-bar-track"><div class="sim-bar-fill before" style="width:{before_w:.1f}%"></div></div>
+                    <div class="sim-bar-track"><div class="sim-bar-fill after" style="width:{after_w:.1f}%"></div></div>
+                </div>
+                <div class="sim-bar-value">기존 {r['before']:,}원<br>추천 {r['after']:,}원<br><strong>{r['saving']:,}원 절감</strong></div>
+            </div>
+            """
+
+        ranked = sorted(rows, key=lambda x: x["saving"], reverse=True)
+        max_saving = max([r["saving"] for r in ranked] + [1])
+        rank_html = ""
+        for idx, r in enumerate(ranked, 1):
+            width = max(8, r["saving"] / max_saving * 100)
+            rank_html += f"""
+            <div class="sim-rank-row">
+                <div class="sim-rank-num">{idx}</div>
+                <div>
+                    <div class="sim-rank-name">{r['icon']} {r['name']}</div>
+                    <div class="sim-rank-sub">기존 {r['before']:,}원 → 추천 {r['after']:,}원 · 약 {r['rate']:.1f}% 절감</div>
+                    <div class="sim-progress-track"><div class="sim-progress-fill" style="width:{width:.1f}%"></div></div>
+                </div>
+                <div class="sim-rank-save">{r['saving']:,}원</div>
+            </div>
+            """
+
+        _sim_html(f"""
+        <div class="sim-main-grid" style="margin-top:0;">
+            <div class="sim-chart-card">
+                <div class="sim-section-title">
+                    <div>등록 가전별 절감 효과</div>
+                    <span>Schedule 탭 추천 결과 기준 · 총 {total_saving:,}원 절감, 약 {total_rate:.1f}%</span>
+                </div>
+                <div class="sim-legend">
+                    <span><i class="sim-dot before"></i>기존 생활패턴 기준</span>
+                    <span><i class="sim-dot after"></i>추천 스케줄 적용</span>
+                </div>
+                <div class="sim-horizontal-chart">{bar_html}</div>
+            </div>
+
+            <div class="sim-rank-card">
+                <div class="sim-section-title">
+                    <div>가전별 절감액 합산</div>
+                    <span>등록 가전만 반영</span>
+                </div>
+                <div class="sim-rank-list">{rank_html}</div>
+                <div style="margin-top:18px;padding:18px 20px;border-radius:22px;background:rgba(255,228,118,.24);font-weight:900;color:#202124;display:flex;justify-content:space-between;">
+                    <span>최종 합산 절감액</span><span>{total_saving:,}원</span>
+                </div>
+            </div>
+        </div>
+        """)
+
+# ══════════════════════════════════════════
+# 탭4 — 요금 예보
+# ══════════════════════════════════════════
+if False:
+    st.markdown('<div class="section-lbl">오늘 24시간 요금 예보</div>', unsafe_allow_html=True)
+
+    color_map = {"cheap":"#639922","normal":"#378ADD","expensive":"#D85A30","peak":"#E24B4A"}
+    df_today  = pd.DataFrame({
+        "시간":       [f"{h}시" for h in range(24)],
+        "요금(원/kWh)": HOURLY_PRICES,
+        "구간":       [get_status(p) for p in HOURLY_PRICES],
+    })
+    fig3 = go.Figure()
+    for s,col in color_map.items():
+        mask = df_today["구간"]==s
+        label = {"cheap":"경부하","normal":"중간부하","expensive":"최대부하","peak":"피크"}[s]
+        fig3.add_trace(go.Bar(
+            x=df_today[mask]["시간"], y=df_today[mask]["요금(원/kWh)"],
+            name=label, marker_color=col,
+        ))
+    fig3.add_vline(x=current_hour, line_dash="dash", line_color="#191F28",
+                   annotation_text="지금", annotation_position="top")
+    fig3.update_layout(
+        height=340, plot_bgcolor="#FFFFFF", paper_bgcolor="#FFFFFF",
+        barmode="overlay", margin=dict(l=0,r=0,t=20,b=0),
+        font=dict(color="#4E5968"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        xaxis=dict(showgrid=False), yaxis=dict(gridcolor="#F2F4F6"),
+    )
+    st.plotly_chart(fig3, width="stretch")
+
+    # 구간 요약
+    sc1,sc2,sc3,sc4 = st.columns(4)
+    sc1.metric("경부하", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='cheap')}시간",  "107.0원")
+    sc2.metric("중간부하", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='normal')}시간", "153.0원")
+    sc3.metric("최대부하", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='expensive')}시간","188.8원")
+    sc4.metric("DR/예외", f"{sum(1 for p in HOURLY_PRICES if get_status(p)=='peak')}시간",   "별도")
