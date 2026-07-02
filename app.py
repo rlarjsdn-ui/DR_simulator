@@ -2,13 +2,11 @@
 DR 전력 어드바이저 v4 — Premium Dashboard UI
 """
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import pickle
 import os
 from datetime import datetime
-from zoneinfo import ZoneInfo
 import time
 import requests
 import plotly.graph_objects as go
@@ -62,7 +60,7 @@ def load_refit_billing_data():
         REFIT_BILLING_DATA_FILE,
         os.path.join(os.getcwd(), "data", REFIT_BILLING_DATA_FILE),
         os.path.join(os.getcwd(), REFIT_BILLING_DATA_FILE),
-        # 용량 문제로 gzip 압축본을 올린 경우도 자동으로 찾아 읽습니다. (pandas가 .gz를 자동 압축 해제)
+        # 용량 문제로 gzip 압축본을 올린 경우도 자동으로 찾아 읽습니다. (pandas가 .gz 확장자면 자동 압축 해제)
         os.path.join("data", REFIT_BILLING_DATA_FILE_GZ),
         REFIT_BILLING_DATA_FILE_GZ,
         os.path.join(os.getcwd(), "data", REFIT_BILLING_DATA_FILE_GZ),
@@ -88,7 +86,7 @@ def get_home_billing_summary():
             dr_hours=list(range(16, 19)),
             incentive_rate=150,
             dr_participation_rate=0.60,
-            month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+            month=datetime.now().month,
             household_count=5,
         )
         return int(result.get("TOU_DR최종", default_bill)), int(result.get("누진제대비DR절약", default_saving))
@@ -101,46 +99,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-
-# ─── PWA(홈 화면 앱) 설정: 아이콘 + 주소창 숨김 ───
-# st.markdown의 <script>는 브라우저에서 실행되지 않으므로 components.html + window.parent.document 사용
-_PWA_JS = """
-<script>
-(function() {
-    var head = window.parent.document.head;
-    var iconUrlRoot = "https://raw.githubusercontent.com/rlarjsdn-ui/DR_simulator/main/static/dr_icon.png";
-
-    function addTag(tagName, attrs) {
-        var checkAttr = attrs.rel ? 'rel' : (attrs.name ? 'name' : null);
-        if (checkAttr) {
-            var existing = head.querySelectorAll(tagName + '[' + checkAttr + '="' + attrs[checkAttr] + '"]');
-            existing.forEach(function(el) { el.remove(); });
-        }
-        var el = window.parent.document.createElement(tagName);
-        for (var key in attrs) { el.setAttribute(key, attrs[key]); }
-        head.appendChild(el);
-    }
-
-    addTag('link', {rel:'apple-touch-icon', href: iconUrlRoot});
-    addTag('link', {rel:'icon', href: iconUrlRoot});
-    addTag('meta', {name:'apple-mobile-web-app-capable', content:'yes'});
-    addTag('meta', {name:'apple-mobile-web-app-status-bar-style', content:'black-translucent'});
-    addTag('meta', {name:'apple-mobile-web-app-title', content:'DR 어드바이저'});
-    addTag('meta', {name:'mobile-web-app-capable', content:'yes'});
-    addTag('meta', {name:'theme-color', content:'#F2ECE0'});
-})();
-</script>
-"""
-
-components.html(_PWA_JS, height=0, width=0)
-# ─── 실시간 자동 새로고침 (5분마다) ───
-components.html("""
-<script>
-setTimeout(function() {
-    window.parent.location.reload();
-}, 300000);
-</script>
-""", height=0, width=0)
 
 # ─── 토스 스타일 CSS ───
 st.markdown("""
@@ -216,118 +174,6 @@ div[data-testid="stSelectbox"] input{
 
 div[data-testid="stSelectbox"] svg{
     color:#202124 !important;
-}
-
-/* ── number_input 밝은 배경 (폰에서 검은색으로 보이는 문제 해결) ── */
-div[data-testid="stNumberInput"] input{
-    background:#f5f0e8 !important;
-    color:#202124 !important;
-    border-radius:10px !important;
-    border:1px solid rgba(0,0,0,0.1) !important;
-}
-div[data-testid="stNumberInput"] > div{
-    background:#f5f0e8 !important;
-    border-radius:12px !important;
-    border:1px solid rgba(0,0,0,0.1) !important;
-}
-div[data-testid="stNumberInput"] button{
-    background:#f5f0e8 !important;
-    color:#202124 !important;
-    border:none !important;
-}
-
-/* ── 모바일 간격 최적화 (토스 스타일) ── */
-@media(max-width:480px){
-    /* 전체 여백 줄이기 */
-    .main .block-container{
-        padding:0.5rem 0.8rem !important;
-        max-width:100% !important;
-    }
-
-    /* 위젯 간격 줄이기 */
-    div[data-testid="stVerticalBlock"] > div{
-        gap:0.3rem !important;
-    }
-
-    /* 섹션 간격 */
-    div[data-testid="stVerticalBlock"]{
-        gap:0.4rem !important;
-    }
-
-    /* number_input 높이 줄이기 */
-    div[data-testid="stNumberInput"] input{
-        padding:6px 10px !important;
-        font-size:15px !important;
-        height:38px !important;
-    }
-
-    /* selectbox 높이 줄이기 */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div{
-        min-height:38px !important;
-        padding:4px 10px !important;
-    }
-
-    /* 버튼 높이 줄이기 */
-    div[data-testid="stButton"] button{
-        padding:6px 12px !important;
-        font-size:14px !important;
-    }
-
-    /* 탭 글씨 */
-    div[data-testid="stTabs"] button{
-        font-size:13px !important;
-        padding:6px 10px !important;
-    }
-
-    /* 카드 패딩 줄이기 */
-    .section-card, .savings-card, .dr-event-card{
-        padding:12px !important;
-        margin-bottom:8px !important;
-    }
-
-    /* expander 패딩 */
-    div[data-testid="stExpander"]{
-        margin-bottom:6px !important;
-    }
-
-    /* 체크박스 간격 */
-    div[data-testid="stCheckbox"]{
-        margin-bottom:2px !important;
-    }
-
-    /* 메인화면 카드들 세로 배치 */
-    .home-dashboard-grid{
-        display:flex !important;
-        flex-direction:column !important;
-        gap:10px !important;
-        padding:10px !important;
-        min-height:unset !important;
-    }
-    .bottom-dashboard-row{
-        display:flex !important;
-        flex-direction:column !important;
-        gap:10px !important;
-        padding:0 10px 10px !important;
-    }
-    .left-ref-panel, .center-copy, .top-weather-card, .right-ai-panel{
-        position:relative !important;
-        left:unset !important; top:unset !important; right:unset !important;
-        width:100% !important;
-        min-width:unset !important;
-        max-width:100% !important;
-    }
-    .center-copy h1{font-size:20px !important; line-height:1.3 !important;}
-    .schedule-dock{flex-direction:column !important;}
-    .dock-timeline{overflow-x:auto !important;}
-    .smart-schedule-board{overflow-x:auto !important;}
-    .smart-schedule-hours{
-        grid-template-columns:72px repeat(24, minmax(26px,1fr)) !important;
-        min-width:650px !important;
-    }
-    .smart-schedule-row{
-        grid-template-columns:72px 1fr !important;
-        min-width:650px !important;
-    }
 }
 
 /* Schedule/Billing/Forecast 탭 안 selectbox는 HOME 위치/폭 이동 적용하지 않기 */
@@ -1075,102 +921,6 @@ div[data-testid="stTabs"] [data-baseweb="tab-highlight"]{
     }
     .center-copy{padding-top:10px;}
     .schedule-dock{grid-template-columns:1fr;}
-}
-
-@media(max-width:480px){
-    /* 메인화면 전체 레이아웃 */
-    .home-dashboard-grid{
-        display:flex !important;
-        flex-direction:column !important;
-        gap:12px !important;
-        padding:12px !important;
-        min-height:unset !important;
-    }
-    .bottom-dashboard-row{
-        display:flex !important;
-        flex-direction:column !important;
-        gap:12px !important;
-        padding:0 12px 12px !important;
-    }
-
-    /* 중앙 타이틀 */
-    .center-copy{
-        position:relative !important;
-        left:unset !important;
-        top:unset !important;
-        transform:none !important;
-        text-align:left !important;
-        padding:12px !important;
-    }
-    .center-copy h1{font-size:22px !important; line-height:1.3 !important;}
-    .center-copy p{font-size:13px !important;}
-
-    /* 날씨/AI 카드 */
-    .top-weather-card, .right-ai-panel{
-        position:relative !important;
-        left:unset !important;
-        top:unset !important;
-        right:unset !important;
-        width:100% !important;
-        min-width:unset !important;
-        max-width:100% !important;
-    }
-
-    /* AI 피크 카드 글씨 */
-    .ai-peak-label{font-size:28px !important;}
-    .ai-peak-sub{font-size:12px !important;}
-
-    /* 스케줄 도크 */
-    .schedule-dock{
-        flex-direction:column !important;
-        padding:14px !important;
-    }
-    .dock-timeline{overflow-x:auto !important;}
-
-    /* 왼쪽 패널 */
-    .left-ref-panel{
-        position:relative !important;
-        left:unset !important;
-        width:100% !important;
-    }
-
-    /* 스케줄 타임라인 */
-    .smart-schedule-board{overflow-x:auto !important;}
-    .smart-schedule-hours{
-        grid-template-columns:80px repeat(24, minmax(28px,1fr)) !important;
-        min-width:700px !important;
-    }
-    .smart-schedule-row{
-        grid-template-columns:80px 1fr !important;
-        min-width:700px !important;
-    }
-
-    /* 절감 요약 카드 */
-    .saving-summary-card{
-        flex-direction:column !important;
-        gap:10px !important;
-    }
-    .saving-summary-right{
-        align-self:flex-start !important;
-    }
-
-    /* 배경이미지 */
-    .home-bg-overlay{
-        background-attachment:scroll !important;
-    }
-
-    /* 지역 선택 박스 위치/폭 보정 (겹침 방지) */
-    div[data-testid="stSelectbox"]{
-        width:100% !important;
-        max-width:390px !important;
-        transform:none !important;
-        margin:0 auto 12px auto !important;
-    }
-
-    /* HOME 전체 음수 margin 완화 (지역 선택 박스가 아래 카드 덮는 것 방지) */
-    .home-bg-shell{
-        margin:8px auto 1.2rem auto !important;
-    }
 }
 
 /* 지역 선택 박스 위치 보정 */
@@ -2713,44 +2463,6 @@ div[data-testid="stTabs"] div[role="tabpanel"] .stButton > button{
     font-weight:850 !important;
     color:#4d5661 !important;
 }
-
-/* 모바일: 절감 요약 카드가 750px 강제폭 때문에 잘리는 문제 수정 */
-@media(max-width:900px){
-    .saving-summary-card{
-        display:block !important;
-        grid-template-columns:1fr !important;
-        padding:18px 20px !important;
-        gap:0 !important;
-        width:100% !important;
-        max-width:100% !important;
-        box-sizing:border-box !important;
-    }
-    .saving-summary-main{
-        font-size:17px !important;
-        letter-spacing:-.03em !important;
-        word-break:keep-all !important;
-    }
-    .saving-summary-main strong{
-        font-size:20px !important;
-    }
-    .saving-arrow{
-        font-size:16px !important;
-        margin:0 6px !important;
-    }
-    .saving-summary-sub{
-        font-size:12px !important;
-    }
-    .saving-summary-right{
-        margin-top:16px !important;
-        text-align:left !important;
-        width:100% !important;
-        box-sizing:border-box !important;
-    }
-    .saving-summary-save{
-        font-size:26px !important;
-    }
-}
-
 /* DR 이벤트 토글 ON 색상 강제 변경 */
 div[data-testid="stToggle"] div[role="switch"][aria-checked="true"]{
     background-color:rgba(255,228,118,.90) !important;
@@ -2806,7 +2518,7 @@ div[data-testid="stToggle"] div[role="switch"] > div{
 }
 .billing-overview-grid{
     display:grid !important;
-    grid-template-columns:minmax(500px,1.6fr) minmax(260px,.9fr) !important;
+    grid-template-columns:minmax(500px,1.25fr) minmax(210px,.42fr) minmax(390px,.74fr) !important;
     gap:12px !important;
     align-items:stretch !important;
     margin:12px 0 12px !important;
@@ -2832,7 +2544,7 @@ div[data-testid="stToggle"] div[role="switch"] > div{
     letter-spacing:-.035em !important;
 }
 .billing-bill-value{
-    font-size:62px !important;
+    font-size:50px !important;
     line-height:.92 !important;
     font-weight:980 !important;
     letter-spacing:-.08em !important;
@@ -3174,7 +2886,7 @@ div[role="tabpanel"] div[data-testid="stRadio"] label:has(input:checked){
 @media(max-width:1200px){
     .billing-overview-grid,
     .billing-lower-grid{grid-template-columns:1fr !important;}
-    .billing-bill-card{grid-template-columns:1fr !important;gap:16px !important;}
+    .billing-bill-card{grid-template-columns:1.15fr 1px 1fr !important;}
     .billing-divider{display:none !important;}
 }
 @media(max-width:900px){
@@ -3480,7 +3192,7 @@ div[role="tabpanel"] div[data-testid="stRadio"] label:has(input:checked){
 .center-copy-title{font-size:50px !important; line-height:1.05 !important; font-weight:900 !important;}
 .center-copy-sub{font-size:20px !important; font-weight:680 !important; line-height:1.42 !important;}
 .billing-mode-note{display:none !important;}
-.billing-overview-grid{grid-template-columns:minmax(520px,1.6fr) minmax(260px,.9fr) !important; gap:16px !important;}
+.billing-overview-grid{grid-template-columns:minmax(520px,1.18fr) minmax(240px,.46fr) minmax(470px,.90fr) !important; gap:16px !important;}
 .billing-side-note{font-size:12.3px !important; line-height:1.38 !important; max-width:260px !important; overflow-wrap:break-word !important;}
 .billing-chart-card{padding:20px 24px 18px !important; overflow:hidden !important;}
 .billing-chart-head{align-items:flex-start !important; gap:14px !important;}
@@ -3522,71 +3234,861 @@ div[data-testid="stTabs"] div[role="tabpanel"] [data-testid="stCheckbox"] label 
 .billing-lower-grid{align-items:stretch !important;}
 .billing-point-card{min-height:250px !important;}
 
-/* ── 데스크탑/모바일 전환 ── */
-.desktop-only{ display:block; }
-.mobile-only{ display:none; }
 
-@media(max-width:768px){
-    .desktop-only{ display:none !important; }
-    .mobile-only{ display:block !important; }
 
-    .mobile-home-wrap{
-        display:flex !important;
-        flex-direction:column;
-        gap:10px;
-        padding:12px;
-        padding-top:0;
-    }
-    .mobile-card{
-        background:rgba(245,240,232,0.92);
-        backdrop-filter:blur(16px);
-        -webkit-backdrop-filter:blur(16px);
-        border-radius:20px;
-        padding:16px;
-        box-shadow:0 4px 20px rgba(0,0,0,0.08);
-    }
-    .mobile-main-title{ font-size:20px; font-weight:700; color:#1a1a1a; line-height:1.3; }
-    .mobile-date{ font-size:12px; color:#888; margin-top:4px; }
-    .mobile-chip{ display:inline-block; background:#ffe476; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; margin:10px 0 4px; }
-    .mobile-status-text{ font-size:13px; color:#555; margin-bottom:4px; }
-    .mobile-price{ font-size:32px; font-weight:800; color:#1a1a1a; }
-    .mobile-price span{ font-size:14px; font-weight:500; color:#888; margin-left:2px; }
-    .mobile-peak-chip{ display:inline-block; background:rgba(0,0,0,0.06); border-radius:20px; padding:4px 12px; font-size:12px; color:#555; margin:8px 0 12px; }
-    .mobile-summary-row{ display:flex; gap:0; border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; }
-    .mobile-summary-item{ flex:1; }
-    .mobile-summary-divider{ width:1px; background:rgba(0,0,0,0.08); margin:0 12px; }
-    .mobile-summary-label{ font-size:11px; color:#888; margin-bottom:4px; }
-    .mobile-summary-value{ font-size:18px; font-weight:700; color:#1a1a1a; }
-    .mobile-summary-value span{ font-size:11px; font-weight:400; color:#888; }
-    .mobile-summary-hint{ font-size:11px; color:#aaa; margin-top:2px; }
-    .mobile-card-head{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#888; margin-bottom:8px; }
-    .mobile-region-pill{ display:inline-block; background:rgba(0,0,0,0.06); border-radius:20px; padding:3px 10px; font-size:11px; color:#555; margin-bottom:8px; }
-    .mobile-weather-body{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-    .mobile-temp{ font-size:36px; font-weight:700; color:#1a1a1a; }
-    .mobile-weather-desc{ font-size:13px; color:#666; }
-    .mobile-weather-detail{ display:flex; gap:12px; font-size:12px; color:#888; flex-wrap:wrap; }
-    .ai-badge-sm{ background:#ffe476; border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; }
-    .mobile-ai-body{ display:flex; justify-content:space-between; align-items:flex-start; margin:8px 0; }
-    .mobile-ai-status{ font-size:28px; font-weight:800; color:#1a1a1a; }
-    .mobile-ai-desc{ font-size:12px; color:#888; margin-top:2px; }
-    .mobile-ai-load{ background:rgba(255,255,255,0.7); border-radius:12px; padding:8px 14px; text-align:center; }
-    .mobile-ai-load-label{ font-size:11px; color:#888; }
-    .mobile-ai-load-value{ font-size:16px; font-weight:700; color:#1a1a1a; }
-    .mobile-risk-bar-wrap{ margin:8px 0; }
-    .mobile-risk-label{ display:flex; justify-content:space-between; font-size:12px; color:#888; margin-bottom:4px; }
-    .mobile-ai-action{ font-size:12px; color:#555; margin-top:6px; line-height:1.5; }
-    .mobile-dr-card{ display:flex !important; justify-content:space-between; align-items:center; text-decoration:none; color:inherit; }
-    .mobile-dr-left{ display:flex; align-items:center; gap:12px; }
-    .mobile-dr-icon{ font-size:24px; background:#ffe476; border-radius:14px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
-    .mobile-dr-title{ font-size:15px; font-weight:700; color:#1a1a1a; }
-    .mobile-dr-sub{ font-size:12px; color:#555; margin-top:2px; }
-    .mobile-dr-meta{ font-size:11px; color:#888; margin-top:2px; }
-    .mobile-schedule-head{ font-size:15px; font-weight:700; color:#1a1a1a; margin-bottom:6px; }
-    .mobile-schedule-desc{ font-size:12px; color:#888; margin-bottom:10px; }
-    .mobile-schedule-btn{ display:block; text-align:center; background:rgba(255,255,255,0.8); border-radius:14px; padding:10px; font-size:14px; font-weight:600; color:#1a1a1a; text-decoration:none; margin-top:10px; }
-    .dock-timeline{ overflow-x:auto !important; }
-    .smart-schedule-board{ overflow-x:auto !important; }
+/* Billing UI polish update: cleaner cards, structured notes, larger chart */
+.billing-overview-grid{
+    grid-template-columns:minmax(540px,1.14fr) minmax(260px,.42fr) minmax(560px,1.02fr) !important;
+    gap:18px !important;
+    align-items:stretch !important;
 }
+.billing-bill-card{
+    min-height:230px !important;
+    padding:30px 34px !important;
+    grid-template-columns:minmax(0,1fr) 1px 245px !important;
+}
+.billing-card-sub{
+    font-size:14px !important;
+    line-height:1.55 !important;
+    max-width:360px !important;
+}
+.billing-sub-arrow{
+    display:inline-flex !important;
+    margin:2px 8px 0 0 !important;
+    color:#d6a800 !important;
+    font-weight:950 !important;
+}
+.billing-save-value{
+    font-size:46px !important;
+    line-height:1.02 !important;
+}
+.billing-side-card{
+    padding:22px 22px !important;
+}
+.billing-side-label{
+    font-size:14px !important;
+    line-height:1.25 !important;
+}
+.billing-side-value{
+    font-size:40px !important;
+    margin-bottom:12px !important;
+}
+.billing-side-note{
+    display:grid !important;
+    gap:5px !important;
+    font-size:12.6px !important;
+    line-height:1.42 !important;
+    max-width:100% !important;
+}
+.billing-side-note span{
+    display:block !important;
+}
+.billing-chart-card{
+    min-height:260px !important;
+    padding:26px 30px 22px !important;
+}
+.billing-chart-head{
+    margin-bottom:16px !important;
+    align-items:flex-start !important;
+}
+.billing-chart-title{
+    font-size:22px !important;
+    line-height:1.25 !important;
+    max-width:360px !important;
+}
+.billing-chart-title span{
+    font-size:13px !important;
+}
+.billing-chart-legend{
+    font-size:12px !important;
+    gap:14px !important;
+    padding-top:3px !important;
+}
+.billing-bar-area{
+    height:178px !important;
+    gap:14px !important;
+    padding:18px 8px 0 !important;
+}
+.billing-bar{
+    width:22px !important;
+    border-radius:9px 9px 0 0 !important;
+}
+.billing-bar-group{
+    gap:8px !important;
+}
+.billing-bar-value{
+    font-size:11.5px !important;
+    top:-22px !important;
+    font-weight:900 !important;
+}
+.billing-month-row{
+    font-size:12px !important;
+    padding-top:10px !important;
+}
+.billing-lower-grid{
+    grid-template-columns:minmax(0,2.18fr) minmax(330px,.78fr) !important;
+    gap:16px !important;
+}
+.billing-compare-wrap{
+    min-height:330px !important;
+    padding:28px 30px 30px !important;
+}
+.billing-section-title{
+    align-items:center !important;
+    gap:14px !important;
+    font-size:22px !important;
+    margin-bottom:24px !important;
+}
+.billing-section-title span{
+    font-size:13px !important;
+    line-height:1.3 !important;
+    padding:6px 12px !important;
+    border-radius:999px !important;
+    background:rgba(255,255,255,.45) !important;
+    color:#4d5661 !important;
+    white-space:nowrap !important;
+}
+.billing-compare-grid{
+    gap:18px !important;
+}
+.billing-plan-card{
+    min-height:218px !important;
+    padding:26px 26px 24px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:space-between !important;
+}
+.billing-plan-top{
+    display:block !important;
+}
+.billing-plan-label{
+    font-size:15px !important;
+    line-height:1.25 !important;
+    margin-bottom:14px !important;
+    color:#3f4852 !important;
+}
+.billing-plan-value{
+    font-size:44px !important;
+    line-height:.98 !important;
+    margin-bottom:16px !important;
+}
+.billing-plan-sub{
+    font-size:13.2px !important;
+    line-height:1.55 !important;
+    min-height:48px !important;
+    color:#4d5661 !important;
+}
+.billing-plan-chip{
+    width:max-content !important;
+    max-width:100% !important;
+    margin-top:14px !important;
+    padding:9px 14px !important;
+    font-size:12.5px !important;
+    line-height:1.2 !important;
+    display:inline-flex !important;
+    gap:7px !important;
+    align-items:center !important;
+}
+.billing-plan-chip span{
+    display:inline-block !important;
+    padding-left:7px !important;
+    border-left:1px solid rgba(32,33,36,.16) !important;
+}
+.billing-point-card{
+    padding:26px 28px !important;
+}
+.billing-point-item{
+    font-size:13.2px !important;
+    line-height:1.55 !important;
+}
+@media(max-width:1200px){
+    .billing-overview-grid,.billing-lower-grid{grid-template-columns:1fr !important;}
+    .billing-compare-grid{grid-template-columns:1fr !important;}
+    .billing-section-title{align-items:flex-start !important; flex-direction:column !important;}
+    .billing-section-title span{white-space:normal !important;}
+}
+
+
+/* Billing final compact polish: amount one-line + cleaner plan notes */
+.billing-overview-grid{
+    grid-template-columns:minmax(500px,1.05fr) minmax(250px,.44fr) minmax(500px,.86fr) !important;
+    gap:16px !important;
+    align-items:stretch !important;
+}
+.billing-bill-card{
+    min-height:212px !important;
+    padding:28px 32px !important;
+    grid-template-columns:minmax(245px,1fr) 1px 225px !important;
+    gap:20px !important;
+}
+.billing-card-label{
+    font-size:15px !important;
+    margin-bottom:12px !important;
+}
+.billing-bill-value{
+    font-size:42px !important;
+    line-height:1.02 !important;
+    letter-spacing:-0.065em !important;
+    white-space:nowrap !important;
+    word-break:keep-all !important;
+    margin-bottom:16px !important;
+}
+.billing-card-sub{
+    font-size:13.2px !important;
+    line-height:1.5 !important;
+    max-width:320px !important;
+    word-break:keep-all !important;
+}
+.billing-save-title{
+    font-size:13px !important;
+    margin-bottom:11px !important;
+}
+.billing-save-value{
+    font-size:38px !important;
+    line-height:1.02 !important;
+    letter-spacing:-0.06em !important;
+    white-space:nowrap !important;
+}
+.billing-save-pill{
+    font-size:12.5px !important;
+    padding:7px 14px !important;
+}
+.billing-divider{
+    height:112px !important;
+}
+.billing-chart-card{
+    min-height:232px !important;
+    padding:22px 26px 18px !important;
+}
+.billing-chart-head{
+    margin-bottom:10px !important;
+}
+.billing-chart-title{
+    font-size:20px !important;
+    line-height:1.25 !important;
+    max-width:330px !important;
+}
+.billing-chart-legend{
+    font-size:11.2px !important;
+    gap:10px !important;
+}
+.billing-bar-area{
+    height:148px !important;
+    gap:12px !important;
+    padding:14px 6px 0 !important;
+}
+.billing-bar{
+    width:18px !important;
+    border-radius:8px 8px 0 0 !important;
+}
+.billing-bar-value{
+    font-size:10px !important;
+    top:-17px !important;
+}
+.billing-month-row{
+    margin-top:9px !important;
+    font-size:12px !important;
+}
+.billing-compare-wrap{
+    padding:24px 26px 28px !important;
+}
+.billing-compare-grid{
+    gap:18px !important;
+    align-items:stretch !important;
+}
+.billing-plan-card{
+    min-height:190px !important;
+    padding:24px 26px !important;
+    justify-content:space-between !important;
+}
+.billing-plan-label{
+    font-size:15px !important;
+    line-height:1.25 !important;
+    margin-bottom:13px !important;
+}
+.billing-plan-value{
+    font-size:40px !important;
+    line-height:1.02 !important;
+    letter-spacing:-0.06em !important;
+    white-space:nowrap !important;
+    margin-bottom:14px !important;
+}
+.billing-plan-sub{
+    font-size:13px !important;
+    line-height:1.55 !important;
+    min-height:44px !important;
+    max-width:300px !important;
+    word-break:keep-all !important;
+    color:#4d5661 !important;
+}
+.billing-plan-chip{
+    margin-top:12px !important;
+    font-size:12.5px !important;
+    line-height:1.25 !important;
+    padding:8px 13px !important;
+    white-space:nowrap !important;
+}
+@media(max-width:1200px){
+    .billing-overview-grid{grid-template-columns:1fr !important;}
+    .billing-bill-card{grid-template-columns:1fr !important;}
+    .billing-divider{display:none !important;}
+}
+
+
+
+/* DR 알림/계산 기준 문구 간결화 */
+.dr-alert-desc{
+    display:grid !important;
+    gap:6px !important;
+    line-height:1.55 !important;
+}
+.dr-alert-subline{
+    color:#3f4852 !important;
+    font-weight:720 !important;
+}
+.billing-point-list{
+    gap:16px !important;
+}
+.billing-point-item span:last-child{
+    line-height:1.48 !important;
+    word-break:keep-all !important;
+}
+
+
+
+/* DR ON/OFF 절감액 분리 표시 */
+.dr-split-summary .saving-summary-sub{
+    display:grid !important;
+    gap:6px !important;
+    max-width:820px !important;
+    line-height:1.45 !important;
+}
+.dr-split-summary .saving-summary-sub div{
+    color:#4d5661 !important;
+    font-size:13px !important;
+    font-weight:720 !important;
+    word-break:keep-all !important;
+}
+.dr-split-summary .saving-summary-sub strong,
+.dr-split-summary .saving-summary-sub b{
+    color:#202124 !important;
+    font-weight:900 !important;
+}
+.saving-summary-rate.tiny{
+    font-size:10.5px !important;
+    line-height:1.35 !important;
+    color:#5f6873 !important;
+    max-width:210px !important;
+}
+
+
+/* ===== Final UI patch: Schedule saving summary readability + replace billing graph ===== */
+.dr-split-summary{
+    padding:26px 30px !important;
+    gap:32px !important;
+}
+.dr-split-summary .saving-summary-label{
+    font-size:15px !important;
+    margin-bottom:12px !important;
+}
+.dr-split-summary .saving-summary-main{
+    font-size:30px !important;
+    line-height:1.24 !important;
+    letter-spacing:-.055em !important;
+}
+.dr-split-summary .saving-summary-main strong{
+    font-size:34px !important;
+    white-space:nowrap !important;
+}
+.dr-split-summary .saving-summary-sub{
+    margin-top:14px !important;
+    display:grid !important;
+    gap:8px !important;
+    max-width:900px !important;
+}
+.dr-split-summary .saving-summary-sub div{
+    display:block !important;
+    padding:8px 12px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.34) !important;
+    border:1px solid rgba(255,255,255,.45) !important;
+    color:#3f4852 !important;
+    font-size:15px !important;
+    line-height:1.42 !important;
+    font-weight:760 !important;
+    word-break:keep-all !important;
+}
+.dr-split-summary .saving-summary-sub strong{
+    display:inline-block !important;
+    min-width:138px !important;
+    color:#202124 !important;
+    font-weight:930 !important;
+}
+.dr-split-summary .saving-summary-sub b{
+    color:#202124 !important;
+    font-weight:930 !important;
+}
+.dr-split-summary .saving-summary-right{
+    min-width:245px !important;
+    text-align:center !important;
+    padding:18px 22px !important;
+}
+.dr-split-summary .saving-summary-save{
+    font-size:36px !important;
+    white-space:nowrap !important;
+}
+.dr-split-summary .saving-summary-rate{
+    font-size:14px !important;
+}
+.dr-split-summary .saving-summary-rate.tiny{
+    margin-top:10px !important;
+    font-size:12.5px !important;
+    line-height:1.45 !important;
+    max-width:220px !important;
+}
+
+.billing-overview-grid{
+    grid-template-columns:minmax(520px,1.08fr) minmax(245px,.42fr) minmax(420px,.72fr) !important;
+    gap:18px !important;
+}
+.billing-tou-card{
+    padding:24px 26px !important;
+    border-radius:24px !important;
+    background:rgba(255,255,255,.46) !important;
+    border:1px solid rgba(255,255,255,.68) !important;
+    box-shadow:0 10px 24px rgba(0,0,0,.055) !important;
+    color:#202124 !important;
+    min-height:238px !important;
+}
+.billing-tou-title{
+    font-size:22px !important;
+    line-height:1.25 !important;
+    font-weight:950 !important;
+    letter-spacing:-.045em !important;
+    margin-bottom:16px !important;
+    color:#202124 !important;
+}
+.billing-tou-grid{
+    display:grid !important;
+    grid-template-columns:repeat(3,1fr) !important;
+    gap:10px !important;
+    margin-bottom:14px !important;
+}
+.billing-tou-item{
+    padding:13px 12px !important;
+    border-radius:18px !important;
+    background:rgba(255,255,255,.42) !important;
+    border:1px solid rgba(255,255,255,.60) !important;
+}
+.billing-tou-item.peak{
+    background:rgba(255,228,118,.25) !important;
+    border-color:rgba(255,205,64,.45) !important;
+}
+.billing-tou-name{
+    font-size:12px !important;
+    font-weight:880 !important;
+    color:#5a6470 !important;
+    margin-bottom:7px !important;
+}
+.billing-tou-time{
+    font-size:15px !important;
+    font-weight:930 !important;
+    color:#202124 !important;
+    margin-bottom:7px !important;
+    white-space:nowrap !important;
+}
+.billing-tou-rate{
+    font-size:20px !important;
+    line-height:1 !important;
+    font-weight:980 !important;
+    color:#202124 !important;
+    letter-spacing:-.04em !important;
+    white-space:nowrap !important;
+}
+.billing-tou-rate span{
+    font-size:11px !important;
+    font-weight:830 !important;
+    margin-left:2px !important;
+}
+.billing-dr-rule{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:10px !important;
+    margin-top:12px !important;
+}
+.billing-dr-rule div{
+    padding:11px 12px !important;
+    border-radius:16px !important;
+    background:rgba(255,228,118,.24) !important;
+    border:1px solid rgba(255,255,255,.56) !important;
+    font-size:13px !important;
+    line-height:1.45 !important;
+    font-weight:800 !important;
+    color:#3f4852 !important;
+    word-break:keep-all !important;
+}
+.billing-dr-rule strong{
+    color:#202124 !important;
+    font-weight:940 !important;
+}
+.billing-bill-value,
+.billing-save-value{
+    white-space:nowrap !important;
+}
+@media(max-width:1200px){
+    .billing-overview-grid{grid-template-columns:1fr !important;}
+    .billing-tou-grid{grid-template-columns:1fr !important;}
+    .billing-dr-rule{grid-template-columns:1fr !important;}
+}
+/* Billing 상단 2열 레이아웃 최종 보정 */
+.billing-overview-grid{
+    display:grid !important;
+    grid-template-columns:minmax(0, 2.15fr) minmax(300px, .85fr) !important;
+    gap:18px !important;
+    align-items:stretch !important;
+    width:100% !important;
+    margin:12px 0 16px !important;
+}
+
+/* 왼쪽 큰 요금 카드 */
+.billing-bill-card{
+    width:100% !important;
+    min-height:240px !important;
+    padding:34px 38px !important;
+    grid-template-columns:minmax(0, 1fr) 1px minmax(230px, .72fr) !important;
+    gap:26px !important;
+}
+
+/* 오른쪽 보조 카드 묶음 */
+.billing-side-stack{
+    width:100% !important;
+    display:grid !important;
+    grid-template-rows:1fr 1fr !important;
+    gap:14px !important;
+}
+
+/* 오른쪽 카드가 너무 좁아 보이지 않도록 */
+.billing-side-card{
+    min-height:112px !important;
+    padding:22px 24px !important;
+}
+
+/* 큰 금액 한 줄 유지 */
+.billing-bill-value{
+    font-size:46px !important;
+    line-height:1.02 !important;
+    letter-spacing:-0.065em !important;
+    white-space:nowrap !important;
+    word-break:keep-all !important;
+}
+
+/* 절감액도 한 줄 유지 */
+.billing-save-value{
+    font-size:40px !important;
+    line-height:1.02 !important;
+    white-space:nowrap !important;
+}
+
+/* 오른쪽 작은 카드 숫자 정리 */
+.billing-side-value{
+    font-size:38px !important;
+    line-height:1.02 !important;
+    white-space:nowrap !important;
+}
+
+.billing-side-value span{
+    font-size:18px !important;
+    margin-left:4px !important;
+}
+
+/* 태블릿/좁은 화면에서는 세로 배치 */
+@media(max-width:1200px){
+    .billing-overview-grid{
+        grid-template-columns:1fr !important;
+    }
+
+    .billing-bill-card{
+        grid-template-columns:1fr !important;
+    }
+
+    .billing-divider{
+        display:none !important;
+    }
+}
+/* ===============================
+   Tablet responsive layout
+   768px ~ 1200px
+================================ */
+@media (max-width: 1200px) {
+    .main .block-container{
+        max-width:100% !important;
+        padding:0.8rem 1rem 1.5rem !important;
+    }
+
+    .home-bg-shell{
+        width:100% !important;
+        margin:-80px auto 1rem auto !important;
+    }
+
+    .home-dashboard-grid{
+        grid-template-columns:1fr 1fr !important;
+        grid-template-rows:auto !important;
+        gap:18px !important;
+    }
+
+    .left-ref-panel{
+        grid-column:1 / span 2 !important;
+        grid-row:auto !important;
+        transform:none !important;
+        min-height:auto !important;
+    }
+
+    .center-copy{
+        grid-column:1 / span 2 !important;
+        grid-row:auto !important;
+        width:100% !important;
+        padding-top:10px !important;
+    }
+
+    .top-weather-card{
+        grid-column:1 !important;
+        grid-row:auto !important;
+        margin-top:0 !important;
+    }
+
+    .right-ai-panel{
+        grid-column:2 !important;
+        grid-row:auto !important;
+        margin-top:0 !important;
+    }
+
+    .bottom-dashboard-row{
+        grid-template-columns:1fr !important;
+        margin-left:0 !important;
+        margin-top:40px !important;
+    }
+
+    .schedule-dock{
+        grid-template-columns:1fr !important;
+    }
+
+    div[data-testid="stSelectbox"]{
+        width:100% !important;
+        transform:none !important;
+    }
+
+    .billing-overview-grid{
+        grid-template-columns:1fr !important;
+    }
+
+    .billing-bill-card{
+        grid-template-columns:1fr !important;
+        min-height:auto !important;
+    }
+
+    .billing-divider{
+        display:none !important;
+    }
+
+    .billing-side-stack{
+        grid-template-columns:1fr 1fr !important;
+        grid-template-rows:auto !important;
+    }
+
+    .billing-tou-grid{
+        grid-template-columns:1fr !important;
+    }
+
+    .reason-card-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+/* ===============================
+   Mobile responsive layout
+   below 768px
+================================ */
+@media (max-width: 768px) {
+    .main .block-container{
+        padding:0.6rem 0.7rem 1.2rem !important;
+    }
+
+    .home-bg-shell{
+        width:100% !important;
+        margin:-40px auto 1rem auto !important;
+    }
+
+    .home-dashboard-grid{
+        display:block !important;
+    }
+
+    .left-ref-panel,
+    .top-weather-card,
+    .right-ai-panel,
+    .schedule-dock,
+    .dr-notice-card{
+        width:100% !important;
+        min-height:auto !important;
+        margin:0 0 16px 0 !important;
+        transform:none !important;
+        border-radius:24px !important;
+    }
+
+    .center-copy{
+        width:100% !important;
+        padding:10px 0 16px !important;
+    }
+
+    .center-copy-title{
+        font-size:30px !important;
+        line-height:1.15 !important;
+    }
+
+    .center-copy-sub{
+        font-size:15px !important;
+        line-height:1.45 !important;
+    }
+
+    .left-ref-title{
+        font-size:28px !important;
+    }
+
+    .left-main-price{
+        font-size:32px !important;
+    }
+
+    .summary-value{
+        font-size:24px !important;
+    }
+
+    .weather-card-body{
+        grid-template-columns:1fr !important;
+    }
+
+    .ai-status-row{
+        grid-template-columns:1fr !important;
+    }
+
+    .bottom-dashboard-row{
+        display:block !important;
+        margin:20px 0 0 !important;
+    }
+
+    div[data-testid="stTabs"] div[role="tabpanel"]{
+        padding:18px 14px 24px !important;
+        border-radius:24px !important;
+    }
+
+    div[data-testid="stTabs"] > div[role="tablist"]{
+        width:100% !important;
+        overflow-x:auto !important;
+        gap:12px !important;
+        padding:8px 10px !important;
+    }
+
+    button[data-baseweb="tab"]{
+        min-width:auto !important;
+        padding:8px 12px !important;
+    }
+
+    button[data-baseweb="tab"] p{
+        font-size:14px !important;
+    }
+
+    .section-lbl{
+        font-size:22px !important;
+    }
+
+    .billing-overview-grid{
+        grid-template-columns:1fr !important;
+        gap:14px !important;
+    }
+
+    .billing-bill-card{
+        grid-template-columns:1fr !important;
+        padding:24px 22px !important;
+        min-height:auto !important;
+    }
+
+    .billing-bill-value{
+        font-size:42px !important;
+        white-space:nowrap !important;
+    }
+
+    .billing-save-value{
+        font-size:36px !important;
+        white-space:nowrap !important;
+    }
+
+    .billing-side-stack{
+        grid-template-columns:1fr !important;
+    }
+
+    .billing-side-value{
+        font-size:34px !important;
+    }
+
+    .billing-tou-grid{
+        grid-template-columns:1fr !important;
+    }
+
+    .billing-plan-card{
+        min-height:auto !important;
+        padding:22px !important;
+    }
+
+    .saving-summary-card{
+        display:block !important;
+        padding:18px !important;
+    }
+
+    .saving-summary-main{
+        font-size:20px !important;
+    }
+
+    .saving-summary-main strong{
+        font-size:24px !important;
+    }
+
+    .saving-summary-right{
+        margin-top:16px !important;
+        text-align:left !important;
+        width:100% !important;
+    }
+
+    .saving-summary-save{
+        font-size:32px !important;
+        white-space:nowrap !important;
+    }
+
+    .reason-card-grid{
+        grid-template-columns:1fr !important;
+    }
+
+    .reason-card{
+        min-height:auto !important;
+    }
+
+    .reason-desc{
+        max-width:100% !important;
+    }
+
+    .reason-tag{
+        position:static !important;
+        margin-top:12px !important;
+        display:inline-flex !important;
+    }
+
+    .smart-schedule-board{
+        overflow-x:auto !important;
+        -webkit-overflow-scrolling:touch !important;
+    }
+
+    .smart-schedule-hours,
+    .smart-schedule-row{
+        min-width:900px !important;
+    }
+}
+</style>
 
 """, unsafe_allow_html=True)
 # ─── 탭 버튼 글씨 색상 최종 고정 ───
@@ -3620,73 +4122,22 @@ div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *{
 </style>
 """, unsafe_allow_html=True)
 # ─── HOME 배경 이미지 설정 ───
-# assets/home_bg_web.png 파일을 찾아서 웹 배경용 JPEG로 가볍게 변환 후 적용
-# PNG 원본을 그대로 CSS data-uri로 넣으면 브라우저/Streamlit에서 적용이 안 되거나 느릴 수 있어 압축본을 자동 생성합니다.
-from pathlib import Path
-import base64
-from io import BytesIO
+# 로컬 파일을 찾아 base64로 인코딩하지 않고, GitHub raw 주소를 직접 CSS에 넣습니다.
+# (아이콘과 동일한 방식 — 파일 존재 여부/경로 문제와 무관하게 항상 같은 주소로 로드)
+BG_IMAGE_URL = "https://raw.githubusercontent.com/rlarjsdn-ui/DR_simulator/main/home_bg_web.png"
 
-def _make_bg_data_uri():
-    candidates = [
-		Path("home_bg_web.png"),
-        Path("assets/home_bg_web.png"),
-        Path("assets/home_bg_web.jpg"),
-        Path("assets/home_bg_web.jpeg"),
-        Path("assets/home_bg_web.webp"),
-        Path("assets/따스한_빛_속의_현대_건축물.png"),
-    ]
-
-    src_path = None
-    for p in candidates:
-        if p.exists():
-            src_path = p
-            break
-
-    if src_path is None:
-        return None, None
-
-    try:
-        from PIL import Image
-        img = Image.open(src_path).convert("RGB")
-
-        # 웹 배경용으로 자동 리사이즈: 화질 유지하면서 로딩 부담 줄임
-        max_w = 1920
-        if img.width > max_w:
-            ratio = max_w / img.width
-            img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
-
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=88, optimize=True)
-        data = base64.b64encode(buf.getvalue()).decode("utf-8")
-        return f"data:image/jpeg;base64,{data}", str(src_path)
-
-    except Exception:
-        # PIL 문제가 있으면 원본 그대로 fallback
-        try:
-            ext = src_path.suffix.lower().replace(".", "")
-            mime = "jpeg" if ext in ["jpg", "jpeg"] else ext
-            data = base64.b64encode(src_path.read_bytes()).decode("utf-8")
-            return f"data:image/{mime};base64,{data}", str(src_path)
-        except Exception:
-            return None, str(src_path)
-
-_bg_uri, _bg_used_path = _make_bg_data_uri()
-
-if _bg_uri:
-    st.markdown(f"""
-    <style>
-    .stApp {{
-        background-image:
-            linear-gradient(rgba(10,15,24,.20), rgba(10,15,24,.22)),
-            url("{_bg_uri}") !important;
-        background-size: cover !important;
-        background-position: center 62% !important;
-        background-attachment: fixed !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-else:
-    st.warning("배경 이미지 파일을 찾지 못했습니다. assets/home_bg_web.png 파일명을 확인해주세요.")
+st.markdown(f"""
+<style>
+.stApp {{
+    background-image:
+        linear-gradient(rgba(10,15,24,.20), rgba(10,15,24,.22)),
+        url("{BG_IMAGE_URL}") !important;
+    background-size: cover !important;
+    background-position: center 62% !important;
+    background-attachment: fixed !important;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 
 # ─── 도시 목록 (옵션2: 17개) ───
@@ -3793,7 +4244,7 @@ def calc_progressive(kwh):
     billing.py가 있으면 기본요금/부가세/전력산업기반기금이 포함된 계산을 사용합니다.
     """
     if BILLING_READY and billing_calculate_progressive_bill is not None:
-        return billing_calculate_progressive_bill(kwh, month=datetime.now(ZoneInfo("Asia/Seoul")).month)["합계"]
+        return billing_calculate_progressive_bill(kwh, month=datetime.now().month)["합계"]
 
     # fallback: 기존 단순 계산
     if kwh <= 200:
@@ -3813,7 +4264,7 @@ def calc_tou(kwh, dr=False):
             monthly_kwh=kwh,
             dr_hours=list(range(16, 19)),
             incentive_rate=150,
-            month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+            month=datetime.now().month,
         )
         return result["TOU_DR최종"] if dr else result["TOU"]
 
@@ -4037,6 +4488,57 @@ def apply_lifestyle_baseline_costs(appliance_recs, selected, current_hour, dr_ho
     return updated
 
 
+def _dr_overlap_kwh(watt, hours, start_hour, dr_hours):
+    """특정 가전 사용 구간 중 DR 시간대와 겹치는 전력량(kWh)."""
+    if not dr_hours:
+        return 0.0
+    dr_set = set(int(h) % 24 for h in dr_hours)
+    total = 0.0
+    full_half_hours = int(float(hours) * 2)
+    for off in range(full_half_hours):
+        h = int((float(start_hour) + off / 2) % 24)
+        if h in dr_set:
+            total += (float(watt) / 1000.0) * 0.5
+    rem = float(hours) - full_half_hours * 0.5
+    if rem > 0:
+        h = int((float(start_hour) + full_half_hours / 2) % 24)
+        if h in dr_set:
+            total += (float(watt) / 1000.0) * rem
+    return total
+
+
+def calculate_schedule_dr_bonus(appliance_recs, selected, dr_mode, dr_hours, dr_reward, participation_rate=0.60, cap_ratio=0.10):
+    """
+    Schedule 탭용 DR 추가 보상금.
+    DR OFF이면 0원, DR ON이면 기존 생활패턴 기준 대비 DR 시간대에서 회피된 전력량만 보상 대상으로 봅니다.
+    에어컨은 완전 차단이 아니라 완화 운전 대상으로 보아 보상 산정에서 제외합니다.
+    """
+    if not dr_mode or not dr_hours:
+        return {"available_kwh": 0.0, "recognized_kwh": 0.0, "bonus": 0, "cap_kwh": 0.0}
+
+    avoided_kwh = 0.0
+    total_schedulable_kwh = 0.0
+    for rec in appliance_recs:
+        name = rec.get("name")
+        if name == "에어컨":
+            continue
+        info = selected.get(name, {})
+        watt = float(info.get("watt", 0))
+        hours = float(info.get("hours", rec.get("hours", 0)))
+        total_schedulable_kwh += (watt / 1000.0) * hours
+
+        baseline_start = float(rec.get("baseline_start", 0))
+        rec_start = float(rec.get("start", 0))
+        baseline_dr_kwh = _dr_overlap_kwh(watt, hours, baseline_start, dr_hours)
+        rec_dr_kwh = _dr_overlap_kwh(watt, hours, rec_start, dr_hours)
+        avoided_kwh += max(baseline_dr_kwh - rec_dr_kwh, 0.0)
+
+    cap_kwh = total_schedulable_kwh * cap_ratio
+    recognized_kwh = min(avoided_kwh * participation_rate, cap_kwh)
+    bonus = int(round(recognized_kwh * float(dr_reward)))
+    return {"available_kwh": avoided_kwh, "recognized_kwh": recognized_kwh, "bonus": bonus, "cap_kwh": cap_kwh}
+
+
 def make_appliance_recommendations(selected, available, direct_available, dr_mode, dr_hours, dr_reward, current_hour, df_forecast, weather, dr_start=16, dr_end=19):
     """등록된 가전별로 개별 스케줄 추천 생성"""
     recs = []
@@ -4113,7 +4615,7 @@ if "selected_city" not in st.session_state:
 alert_threshold = 150
 
 # ─── AI 모델 로드 ───
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "dr_model_refit.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "dr_model.pkl")
 
 @st.cache_data(ttl=1800)  # 30분 캐시
 def get_hourly_forecast(city_name):
@@ -4246,7 +4748,7 @@ def predict_now(month, hour, weekday, is_weekend, avg_temp=20, max_temp=25, min_
     return pred_w, pred_w >= threshold
 
 # ─── 현재 상태 ───
-now           = datetime.now(ZoneInfo("Asia/Seoul"))
+now           = datetime.now()
 current_hour  = now.hour
 current_month = now.month
 current_price = HOURLY_PRICES[current_hour]
@@ -4357,9 +4859,7 @@ else:
 
 st.markdown(f"""
 <div class="home-bg-shell">
-
-<!-- 데스크탑 레이아웃 -->
-<div class="home-dashboard-grid desktop-only">
+<div class="home-dashboard-grid">
 
 <div class="glass-panel left-ref-panel">
 <div class="left-ref-title">오늘의 전기 사용,<br>가장 좋은 시간은?</div>
@@ -4369,6 +4869,7 @@ st.markdown(f"""
 <div class="left-main-price">{current_price}<span>원/kWh</span></div>
 <div class="left-peak-chip">최대부하 대비 {saving_pct}% 낮음 ↓</div>
 <div class="left-ref-divider"></div>
+
 <div class="left-summary-grid">
 <div class="summary-tile min-wide">
 <div class="summary-label">오늘 최저 요금</div>
@@ -4459,97 +4960,7 @@ st.markdown(f"""
 
 </div>
 
-<!-- 모바일 레이아웃 -->
-<div class="mobile-only mobile-home-wrap">
-
-<div class="mobile-card">
-<div class="mobile-title-row">
-<div>
-<div class="mobile-main-title">오늘의 전기 사용,<br>가장 좋은 시간은?</div>
-<div class="mobile-date">{now.strftime("%Y년 %m월 %d일 %H:%M")}</div>
-</div>
-</div>
-<div class="mobile-chip">{s_tag.replace("지금 · ", "")}</div>
-<div class="mobile-status-text">{s_main}</div>
-<div class="mobile-price">{current_price}<span>원/kWh</span></div>
-<div class="mobile-peak-chip">최대부하 대비 {saving_pct}% 낮음 ↓</div>
-<div class="mobile-summary-row">
-<div class="mobile-summary-item">
-<div class="mobile-summary-label">오늘 최저 요금</div>
-<div class="mobile-summary-value">{min_price}<span>원/kWh</span></div>
-<div class="mobile-summary-hint">{min_hour:02d}:00 이후</div>
-</div>
-<div class="mobile-summary-divider"></div>
-<div class="mobile-summary-item">
-<div class="mobile-summary-label">월 예상 요금</div>
-<div class="mobile-summary-value">{monthly_fee_est:,}<span>원</span></div>
-<div class="mobile-summary-hint">절감 {monthly_saving_est:,}원 가능</div>
-</div>
-</div>
-</div>
-
-<div class="mobile-card mobile-weather-card">
-<div class="mobile-card-head"><span>실시간 날씨</span><span>🌤️</span></div>
-<div class="mobile-region-pill">현재 지역 · {selected_city}</div>
-<div class="mobile-weather-body">
-<div class="mobile-temp">{weather['temp']}°C</div>
-<div class="mobile-weather-desc">{weather['desc']}</div>
-<div class="mobile-weather-detail">
-<span>습도 {weather['humidity']}%</span>
-<span>바람 {weather['wind']}m/s</span>
-<span>강수량 {weather['precip']}mm</span>
-</div>
-</div>
-</div>
-
-<div class="mobile-card mobile-ai-card">
-<div class="mobile-card-head"><span>AI 피크 예측</span><span class="ai-badge-sm">AI</span></div>
-<div class="mobile-ai-body">
-<div>
-<div class="mobile-ai-status">{ai_status_text}</div>
-<div class="mobile-ai-desc">{ai_status_desc}</div>
-</div>
-<div class="mobile-ai-load">
-<div class="mobile-ai-load-label">예상 부하</div>
-<div class="mobile-ai-load-value">{ai_txt}</div>
-</div>
-</div>
-<div class="mobile-risk-bar-wrap">
-<div class="mobile-risk-label"><span>피크 위험도</span><strong>{ai_risk_pct}%</strong></div>
-<div class="ai-risk-bar"><div class="ai-risk-fill" style="width:{ai_risk_pct}%;"></div></div>
-</div>
-<div class="mobile-ai-action">{ai_action_text}</div>
-</div>
-
-<a class="mobile-card mobile-dr-card" href="#dr-event-section">
-<div class="mobile-dr-left">
-<span class="mobile-dr-icon">🔔</span>
-<div>
-<div class="mobile-dr-title">전력회사 DR 알림</div>
-<div class="mobile-dr-sub">{dr_time_home} 감축 요청 확인하기</div>
-<div class="mobile-dr-meta">DR 이벤트 시간대 · {dr_reward_home}원/kWh 인센티브</div>
-</div>
-</div>
-<span>→</span>
-</a>
-
-<div class="mobile-card mobile-schedule-card">
-<div class="mobile-schedule-head">
-<span>📅 추천 사용 스케줄</span>
-</div>
-<div class="mobile-schedule-desc">{schedule_desc}</div>
-<div class="dock-timeline" style="overflow-x:auto;">
-<div class="best-time-chip">{min_hour:02d}:00 가장 저렴해요</div>
-<div class="dock-hours"><span>00:00</span><span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>24:00</span></div>
-<div class="dock-line"></div>
-<div class="appliance-row">{home_app_html}</div>
-</div>
-<a class="mobile-schedule-btn" href="#schedule-section">스케줄 보기 →</a>
-</div>
-
-</div>
-
-<div class="bottom-dashboard-row desktop-only">
+<div class="bottom-dashboard-row">
 <div class="schedule-dock">
 <div>
 <div class="schedule-dock-title"><span class="schedule-calendar-icon">📅</span>추천 사용 스케줄</div>
@@ -4632,33 +5043,30 @@ with tab2:
     if "app_list3" not in st.session_state:
         st.session_state.app_list3 = []
 
-    ac1, ac2, ac3 = st.columns([4, 2, 1])
+    ac1, ac2, ac3, ac4, ac5 = st.columns([3.05, 1.28, 1.45, 1.45, 0.95])
     new_app = ac1.selectbox("가전기기", list(APPLIANCE_WATT.keys()),
                              format_func=lambda x: f"{APPLIANCE_ICONS[x]} {x} ({APPLIANCE_WATT[x]}W)",
                              label_visibility="collapsed")
     new_hrs = ac2.number_input("사용 시간(시간)", 0.5, 12.0, 1.0, 0.5, label_visibility="collapsed")
-    if ac3.button("➕ 추가", width="stretch"):
+    new_allow_sleep = ac3.checkbox("취침 중 사용 허용", value=True, key="new_allow_sleep", help="체크하면 취침 시간에도 이 가전을 예약 운전할 수 있습니다.")
+    new_allow_away = ac4.checkbox("외출 중 사용 허용", value=True, key="new_allow_away", help="체크하면 외출 시간에도 이 가전을 예약 운전할 수 있습니다.")
+    if ac5.button("➕ 추가", width="stretch"):
         st.session_state.app_list3.append({
             "name":new_app,"watt":APPLIANCE_WATT[new_app],
             "hours":new_hrs,"icon":APPLIANCE_ICONS[new_app],
-            "allow_sleep":st.session_state.get("new_allow_sleep", False),
-            "allow_away":st.session_state.get("new_allow_away", False),
+            "allow_sleep":new_allow_sleep,"allow_away":new_allow_away,
         })
         st.rerun()
-    chk1, chk2 = st.columns(2)
-    chk1.checkbox("취침 중 사용 허용", value=False, key="new_allow_sleep")
-    chk2.checkbox("외출 중 사용 허용 (예약)", value=False, key="new_allow_away")
 
     if st.session_state.app_list3:
         for idx,item in enumerate(st.session_state.app_list3):
-            ic1,ic2,ic3 = st.columns([4.5, 1.5, 0.55])
-            tags = []
-            if item.get("allow_sleep"): tags.append("취침 중 허용")
-            if item.get("allow_away"):  tags.append("외출 중 허용")
-            tag_txt = f" · {" / ".join(tags)}" if tags else ""
-            ic1.markdown(f"{item['icon']} **{item['name']}**{tag_txt}")
-            ic2.markdown(f"⏱ {item['hours']}시간 · 🔋 {item['watt']/1000*item['hours']:.2f} kWh")
-            if ic3.button("🗑", key=f"del3_{idx}"):
+            ic1,ic2,ic3,ic4,ic5,ic6 = st.columns([2.2,1.05,1.45,1.45,1.1,0.55])
+            ic1.markdown(f"{item['icon']} **{item['name']}**")
+            ic2.markdown(f"⏱ {item['hours']}시간")
+            ic3.markdown("🌙 취침 예약 " + ("허용" if item.get("allow_sleep", True) else "제외"))
+            ic4.markdown("🏠 외출 예약 " + ("허용" if item.get("allow_away", True) else "제외"))
+            ic5.markdown(f"🔋 {item['watt']/1000*item['hours']:.2f} kWh")
+            if ic6.button("🗑", key=f"del3_{idx}"):
                 st.session_state.app_list3.pop(idx)
                 st.rerun()
 
@@ -4712,9 +5120,8 @@ with tab2:
             <div class="dr-alert-chip">16:00 – 19:00</div>
           </div>
           <div class="dr-alert-desc">
-            오늘 저녁 피크 시간대 전력 수요가 높을 것으로 예상됩니다.
-            등록한 가전은 가능한 한 DR 시간대를 피해 자동 스케줄링됩니다.
-            감축 실적은 <strong>{st.session_state.get("dr_reward", 150)}원/kWh</strong> 기준으로 계산하되, Billing 탭의 월간 환산에는 DR 참여율 60%와 월 사용량 10% 보상 상한을 적용합니다.
+            <div>오늘 저녁 피크 시간대 전력 수요가 높을 것으로 예상됩니다. 등록 가전은 가능한 한 DR 시간대를 피해 자동 스케줄링됩니다.</div>
+            <div class="dr-alert-subline">감축 실적은 <strong>{st.session_state.get("dr_reward", 150)}원/kWh</strong> 기준으로 계산하며, 월간 환산에는 DR 참여율 60%와 월 사용량 10% 보상 상한을 적용합니다.</div>
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -5034,40 +5441,19 @@ with tab2:
                 return recs
 
             appliance_recs = _enforce_washer_dryer_chain(appliance_recs, selected)
-
-            # DR 인센티브를 실제 절감액에 반영합니다.
-            # 개념: 기존 생활패턴이라면 DR 시간대에 사용했을 시간을, 추천 스케줄이 피했다면
-            # 그만큼(kWh)에 대해 보상 단가를 곱한 인센티브를 절감액에 더합니다.
-            # 반대로 추천 스케줄도 DR 시간대를 여전히 사용한다면 인센티브는 0입니다.
-            def _apply_dr_incentive(recs, selected_map, dr_on, dr_hour_list, reward):
-                if not dr_on or not dr_hour_list:
-                    return recs
-                dr_set = set(dr_hour_list)
-                for rec in recs:
-                    name = rec.get("name")
-                    watt = float(selected_map.get(name, {}).get("watt", 0))
-                    baseline_start = rec.get("baseline_start", rec.get("start", 0))
-                    baseline_hours = float(rec.get("hours", 0))
-                    rec_start = rec.get("start", 0)
-                    rec_hours = float(rec.get("hours", 0))
-                    baseline_dr_h = schedule_hours(baseline_start, baseline_hours) & dr_set
-                    recommend_dr_h = schedule_hours(rec_start, rec_hours) & dr_set
-                    avoided_h = max(len(baseline_dr_h) - len(recommend_dr_h), 0)
-                    if avoided_h <= 0:
-                        continue
-                    incentive = int(round(watt / 1000 * avoided_h * reward))
-                    if incentive <= 0:
-                        continue
-                    rec["cost"] = max(0, int(rec.get("cost", 0)) - incentive)
-                    baseline_cost = int(rec.get("baseline_cost", rec.get("now_cost", 0)))
-                    rec["saving"] = max(baseline_cost - rec["cost"], 0)
-                    rec["dr_incentive"] = incentive
-                return recs
-
-            appliance_recs = _apply_dr_incentive(appliance_recs, selected, dr_mode, dr_hours, dr_reward)
-
+            dr_bonus_info = calculate_schedule_dr_bonus(
+                appliance_recs,
+                selected,
+                dr_mode=dr_mode,
+                dr_hours=dr_hours,
+                dr_reward=dr_reward,
+                participation_rate=0.60,
+                cap_ratio=0.10,
+            )
             st.session_state["last_schedule_recs"] = [dict(r) for r in appliance_recs]
             st.session_state["last_schedule_selected"] = {k: dict(v) for k, v in selected.items()}
+            st.session_state["last_schedule_dr_bonus"] = dict(dr_bonus_info)
+            st.session_state["last_schedule_dr_mode"] = bool(dr_mode)
             sorted_recs = sorted(appliance_recs, key=lambda r: (r["start"], r["name"]))
 
             # ── 1) 계산 직후 가장 먼저 보이는 추천 스케줄표 ──
@@ -5149,24 +5535,36 @@ with tab2:
             # 추천 스케줄 적용: 위 추천 시간표에 배치된 가전별 추천 시간의 총 요금
             now_display_cost = int(sum(rec.get("baseline_cost", rec.get("now_cost", 0)) for rec in sorted_recs)) if sorted_recs else int(now_cost)
             recommend_display_cost = int(sum(rec.get("cost", 0) for rec in sorted_recs)) if sorted_recs else int(opt_cost)
-            display_saving = max(now_display_cost - recommend_display_cost, 0)
-            display_sav_pct = round(display_saving / now_display_cost * 100) if now_display_cost > 0 else 0
+            tou_saving = max(now_display_cost - recommend_display_cost, 0)
+            dr_bonus_amount = int(dr_bonus_info.get("bonus", 0)) if dr_mode else 0
+            total_saving = tou_saving + dr_bonus_amount
+            recommend_net_cost = max(recommend_display_cost - dr_bonus_amount, 0)
+            display_sav_pct = round(total_saving / now_display_cost * 100) if now_display_cost > 0 else 0
+            dr_bonus_note = (
+                f"DR 회피 인정량&nbsp;{dr_bonus_info.get('recognized_kwh', 0):.2f} kWh&nbsp;×&nbsp;{dr_reward}원/kWh"
+                if dr_mode and dr_bonus_amount > 0
+                else "DR 미참여 상태라 보상금은 반영하지 않았습니다."
+            )
             st.markdown(f'''
-            <div class="saving-summary-card">
+            <div class="saving-summary-card dr-split-summary">
               <div class="saving-summary-left">
                 <div class="saving-summary-label">절감 요약</div>
                 <div class="saving-summary-main">
                   기존 생활패턴 기준 <strong>{now_display_cost:,}원</strong>
                   <span class="saving-arrow">→</span>
-                  추천 스케줄 적용 <strong>{recommend_display_cost:,}원</strong>
+                  추천 스케줄 적용 <strong>{recommend_net_cost:,}원</strong>
                 </div>
-                <div class="saving-summary-sub">일반 가정의 기본 사용 시간대와 추천 스케줄을 비교했습니다.<br>시간대별 요금제(TOU), DR 이벤트, 가전별 제약조건을 반영한 전력량요금 기준입니다.</div>
+                <div class="saving-summary-sub">
+                  <div><strong>DR 미참여 절감액</strong> · 시간대별 요금제(TOU) 최적화로 <b>{tou_saving:,}원</b> 절감</div>
+                  <div><strong>DR 참여 추가 절감액</strong> · DR 회피 보상금 <b>{dr_bonus_amount:,}원</b> 반영</div>
+                  <div><strong>총 절감액</strong> · TOU 절감액 + DR 보상금 = <b>{total_saving:,}원</b></div>
+                </div>
               </div>
               <div class="saving-summary-right">
-                <div class="saving-summary-chip">예상 절감</div>
-                <div class="saving-summary-save">{display_saving:,}원</div>
-                <div class="saving-summary-rate">약 {display_sav_pct}% 절감</div>
-              </div>
+              <div class="saving-summary-chip">총 예상 절감</div>
+              <div class="saving-summary-save">{total_saving:,}원</div>
+              <div class="saving-summary-rate">약 {display_sav_pct}% 절감</div>
+             </div>
             </div>
             ''', unsafe_allow_html=True)
 
@@ -5242,7 +5640,7 @@ with tab3:
                 dr_hours=dr_hours_for_billing,
                 incentive_rate=incentive_rate_for_billing,
                 dr_participation_rate=dr_participation_rate_for_billing,
-                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+                month=datetime.now().month,
                 household_count=5,
             )
             monthly_kwh = int(round(float(billing_result.get("월간환산사용량", billing_result.get("월간사용량", 300)))))
@@ -5278,7 +5676,7 @@ with tab3:
                 dr_hours=dr_hours_for_billing,
                 incentive_rate=incentive_rate_for_billing,
                 dr_participation_rate=dr_participation_rate_for_billing,
-                month=datetime.now(ZoneInfo("Asia/Seoul")).month,
+                month=datetime.now().month,
             )
             prog = int(billing_result["누진제"])
             tou = int(billing_result["TOU"])
@@ -5379,7 +5777,7 @@ with tab3:
                 <div class="billing-save-title">{effect_label}</div>
                 <div class="billing-save-value {save_class}">{effect_value}</div>
                 <div class="billing-save-pill">{effect_pill}</div>
-                <div class="billing-card-sub" style="margin-top:14px;">기준 누진제 {prog:,}원 → 환산 {expected_bill:,}원</div>
+                <div class="billing-card-sub" style="margin-top:14px;">기존 누진제 {prog:,}원<br><span class="billing-sub-arrow">↓</span> 환산 요금 {expected_bill:,}원</div>
             </div>
         </div>
 
@@ -5387,7 +5785,7 @@ with tab3:
             <div class="billing-side-card">
                 <div class="billing-side-label">평균 월간 환산 사용량</div>
                 <div class="billing-side-value">{monthly_kwh}<span>kWh</span></div>
-                <div class="billing-side-note">{usage_note}<br>{usage_source}</div>
+                <div class="billing-side-note"><span>{usage_note}</span><span>{usage_source}</span></div>
             </div>
             <div class="billing-side-card soft">
                 <div class="billing-side-label">예상 탄소 절감량</div>
@@ -5395,6 +5793,7 @@ with tab3:
                 <div class="billing-side-note">30년생 소나무 약 {tree_count}그루를 심는 효과</div>
             </div>
         </div>
+
     </div>
     """
     _html_block(billing_top_html)
@@ -5405,25 +5804,31 @@ with tab3:
     billing_bottom_html = f"""
     <div class="billing-lower-grid">
         <div class="billing-compare-wrap">
-            <div class="billing-section-title">요금제별 월간 환산 요금 비교 <span>REFIT 5개 가구 평균 사용 패턴 {monthly_kwh} kWh/월 기준</span></div>
+            <div class="billing-section-title">요금제별 월간 환산 요금 비교 <span>REFIT 평균 사용 패턴 · {monthly_kwh} kWh/월</span></div>
             <div class="billing-compare-grid">
                 <div class="billing-plan-card">
-                    <div class="billing-plan-label">기존 누진제</div>
-                    <div class="billing-plan-value">{prog:,}원</div>
-                    <div class="billing-plan-sub">현행 주택용 누진제 기준 월간 환산 청구액</div>
-                    <div class="billing-plan-chip">기준 요금</div>
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">기존 누진제</div>
+                        <div class="billing-plan-value">{prog:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">현행 주택용 누진제를 적용한<br>월간 환산 청구액입니다.</div>
+                    <div class="billing-plan-chip">기존 요금</div>
                 </div>
                 <div class="billing-plan-card">
-                    <div class="billing-plan-label">시간대별 요금제(TOU)</div>
-                    <div class="billing-plan-value">{tou:,}원</div>
-                    <div class="billing-plan-sub">제주 주택용 계시별 시간대 구분 기준</div>
-                    <div class="billing-plan-chip {tou_chip_class}">{tou_sub} · 약 {tou_rate:.1f}%</div>
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">시간대별 요금제(TOU)</div>
+                        <div class="billing-plan-value">{tou:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">경부하·중간부하·최대부하 단가를 적용한<br>월간 환산 요금입니다.</div>
+                    <div class="billing-plan-chip {tou_chip_class}">{tou_sub}<span>약 {tou_rate:.1f}%</span></div>
                 </div>
                 <div class="billing-plan-card recommend">
-                    <div class="billing-plan-label">시간대별 요금제(TOU) + DR 참여</div>
-                    <div class="billing-plan-value">{dr:,}원</div>
-                    <div class="billing-plan-sub">DR 참여율 60% · 월 사용량 10% 보상 상한 · 보상 {dr_incentive:,}원 반영</div>
-                    <div class="billing-plan-chip {dr_chip_class}">{dr_sub} · 약 {dr_rate:.1f}%</div>
+                    <div class="billing-plan-top">
+                        <div class="billing-plan-label">시간대별 요금제(TOU) + DR 참여</div>
+                        <div class="billing-plan-value">{dr:,}원</div>
+                    </div>
+                    <div class="billing-plan-sub">DR 참여율 60%와 보상 상한을 적용했습니다.<br>보상 {dr_incentive:,}원을 반영한 결과입니다.</div>
+                    <div class="billing-plan-chip {dr_chip_class}">{dr_sub}<span>약 {dr_rate:.1f}%</span></div>
                 </div>
             </div>
         </div>
@@ -5431,10 +5836,10 @@ with tab3:
         <div class="billing-point-card">
             <div class="billing-point-title">계산 기준</div>
             <div class="billing-point-list">
-                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>REFIT House 1~5의 15분 단위 전력 데이터를 kWh로 변환한 뒤 5개 가구 평균 사용량으로 환산합니다.</span></div>
-                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>최근 평균 사용 패턴이 유지된다고 가정해 30일 기준 월간 환산 요금을 계산합니다.</span></div>
-                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>시간대별 요금제(TOU)는 경부하 22~08시, 중간부하 08~16시, 최대부하 16~22시 단가를 적용합니다.</span></div>
-                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>DR 감축 가능량 {dr_reduced} kWh 중 참여율 60%를 적용하되, 보상 대상은 월 사용량의 최대 10%로 제한합니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>REFIT 5개 가구 데이터를 평균 사용량으로 환산했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>최근 사용 패턴이 유지된다고 가정해 30일 요금을 계산했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>시간대별 요금제(TOU)는 경부하·중간부하·최대부하 3단계 단가를 적용했습니다.</span></div>
+                <div class="billing-point-item"><span class="billing-point-check">✓</span><span>DR 보상은 참여율 60%와 월 사용량 10% 상한을 반영했습니다.</span></div>
             </div>
             <div class="billing-progress-box">
                 <div class="billing-progress-text"><span>월간 환산 절감 효과</span><strong>{progress}%</strong></div>
