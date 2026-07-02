@@ -5451,6 +5451,44 @@ with tab2:
                 return recs
 
             appliance_recs = _enforce_washer_dryer_chain(appliance_recs, selected)
+
+            # 에어컨 기온 영향 비교: "쾌적한 기준 기온(24℃)이었다면" 대비
+            # 오늘 실제 기온 때문에 얼마나 더 오래 쓰고, 그만큼 요금이 얼마나 더 나오는지 계산합니다.
+            def _apply_ac_temp_impact(recs, selected_map, fallback_temp, hourly_temps_map):
+                if "에어컨" not in selected_map:
+                    return recs
+                for rec in recs:
+                    if rec.get("name") != "에어컨":
+                        continue
+                    watt = float(selected_map["에어컨"]["watt"])
+                    requested_hours = float(selected_map["에어컨"].get("hours", rec.get("hours", 1)))
+                    actual_hours = float(rec.get("hours", requested_hours))
+                    start = rec.get("start", current_hour)
+
+                    # 표시용 기온은 "지금 이 순간"이 아니라, 실제 사용시간 계산에 쓰인
+                    # "에어컨이 추천된 그 시각의 예보 기온"을 그대로 가져옵니다.
+                    start_hour_int = int(start) % 24
+                    if hourly_temps_map:
+                        display_temp = hourly_temps_map.get(start_hour_int, fallback_temp)
+                    else:
+                        display_temp = fallback_temp
+
+                    # "쾌적한 날(24℃ 기준)"이었다면 recommend_aircon_schedule의 마지막 분기와 동일하게
+                    # 최대 1시간만 사용한다고 가정합니다.
+                    baseline_hours = min(requested_hours, 1)
+                    baseline_cost = calc_appliance_cost(watt, baseline_hours, start, dr_mode, dr_hours, dr_reward)
+
+                    extra_hours = round(max(actual_hours - baseline_hours, 0), 2)
+                    extra_cost = max(int(rec.get("cost", 0)) - int(round(baseline_cost)), 0)
+
+                    rec["temp_now"] = round(display_temp, 1) if display_temp is not None else None
+                    rec["temp_baseline_hours"] = baseline_hours
+                    rec["temp_extra_hours"] = extra_hours
+                    rec["temp_extra_cost"] = extra_cost
+                return recs
+
+            appliance_recs = _apply_ac_temp_impact(appliance_recs, selected, _temp, hourly_temps_for_schedule)
+
             dr_bonus_info = calculate_schedule_dr_bonus(
                 appliance_recs,
                 selected,
@@ -5587,13 +5625,20 @@ with tab2:
 
                 short_reason = rec.get("reason", "시간대별 요금제(TOU), DR 시간대, 생활패턴 제약을 함께 반영해 추천했습니다.")
 
+                temp_badge = ""
+                if rec.get("name") == "에어컨" and "temp_extra_hours" in rec:
+                    if rec["temp_extra_hours"] > 0:
+                        temp_badge = f'<span>🌡️ {rec["temp_now"]}℃ 영향 · +{rec["temp_extra_hours"]}시간 · +{rec["temp_extra_cost"]:,}원</span>'
+                    else:
+                        temp_badge = f'<span>🌡️ {rec["temp_now"]}℃ · 쾌적 기준, 추가 부담 없음</span>'
+
                 detail_cards += (
                     f'<div class="reason-card">'
                     f'<div class="reason-card-main">'
                     f'<div class="reason-device">{rec["icon"]} {rec["name"]}</div>'
                     f'<div class="reason-time">{time_label}</div>'
                     f'</div>'
-                    f'<div class="reason-metrics"><span>{rec["cost"]:,}원</span><span>{saving_txt}</span></div>'
+                    f'<div class="reason-metrics"><span>{rec["cost"]:,}원</span><span>{saving_txt}</span>{temp_badge}</div>'
                     f'<div class="reason-desc">{short_reason}</div>'
                     f'<div class="reason-tag">{rec["tag"]}</div>'
                     f'</div>'
